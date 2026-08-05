@@ -30,7 +30,6 @@ Dashboard BIM con actualizacion en tiempo real para modelos de Revit. Visualiza 
 | Archivo | Funcion |
 |---------|---------|
 | `AGENTS.md` | Stack, producto, estado de sesion (SSOT) |
-| `docs/start.md` | Indice — empieza aqui |
 | `docs/architecture.md` | Patron, capas, carpetas, flujos |
 | `docs/decisions.md` | ADRs — por que se eligio cada decision |
 | `docs/onboarding.md` | Setup local paso a paso |

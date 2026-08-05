@@ -18,11 +18,9 @@ Mapa tecnico del proyecto. El estilo de codigo y las prohibiciones estan en `.cu
 data-speckle/
 ├── .cursor/rules/                    # Reglas de Cursor AI (globs actualizados)
 ├── docs/                             # Documentacion (SSOT en AGENTS.md)
-│   ├── start.md
 │   ├── architecture.md               # Este archivo
 │   ├── decisions.md                  # ADRs
 │   ├── onboarding.md                 # Setup local
-│   ├── prompting-learning.md
 │   └── prompts/                      # Prompts paso a paso para desarrollo
 │       ├── 01-fundacion.md
 │       ├── 02-dominio-db.md

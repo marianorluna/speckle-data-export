@@ -138,5 +138,4 @@ npm run dev
 | Stack / producto | [`AGENTS.md`](../AGENTS.md) |
 | Capas / carpetas / flujos | [`architecture.md`](./architecture.md) |
 | Decisiones (ADRs) | [`decisions.md`](./decisions.md) |
-| Guia de archivos / empieza aqui | [`start.md`](./start.md) |
 | Prompts paso a paso | [`prompts/`](./prompts/) |

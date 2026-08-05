@@ -88,13 +88,12 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
 
 | Recurso | Dueño |
 |---------|-------|
-| `docs/start.md` | **Índice / empieza aquí** — qué tocar, SSOT, orden de especialización |
 | **Este archivo** (`AGENTS.md`) | Stack (§2), producto/dominio (§3), estado de sesión (§4) |
 | `.cursor/rules/` | Cómo programar y qué está prohibido |
 | `docs/architecture.md` | Patrón, capas, carpetas, flujos client ↔ server |
 | `docs/decisions.md` | ADRs — porqués ya tomados |
 | `docs/onboarding.md` | Cómo arrancar el proyecto en local |
 | `.env.example` | Nombres de variables de entorno (sin secretos) |
-| `docs/prompting-learning.md` | Prompts de mentoría (uso humano en Ask) |
+| `docs/prompts/` | Prompts paso a paso para desarrollo |
 
 Si el agente pierde el hilo: menciona `@AGENTS.md` y/o `@docs/architecture.md` en el chat.
