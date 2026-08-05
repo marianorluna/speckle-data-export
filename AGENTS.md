@@ -55,24 +55,25 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
 
 ## 4. Estado actual
 
-- **Última sesión:** 2026-08-05 — Especialización del boilerplate: stack definido (FastAPI + React + SQLite + Speckle + DeepSeek), ADRs 002-009 registrados, estructura de carpetas documentada.
-- **Foco actual:** fase 0 (boilerplate) — especializar AGENTS.md, architecture.md, decisions.md, onboarding.md, .env.example, README.md y reglas de Cursor. Siguiente: crear prompts paso a paso en docs/prompts/.
+- **Última sesión:** 2026-08-05 — Ejecutado prompt 01: monorepo `apps/api` (FastAPI + SQLAlchemy async) y `apps/web` (Vite + React + Tailwind v4); `/health` y UI "BIM Dashboard" verificados.
+- **Foco actual:** prompt 02 (dominio + DB) — entidades y modelos SQLAlchemy.
 - **Checklist:**
   - [x] Definir stack completo en AGENTS.md §2
   - [x] Rellenar contexto de negocio en AGENTS.md §3
+  - [x] Ejecutar prompt 01 (fundación monorepo: API `/health` + web Vite)
   - [ ] Actualizar docs/architecture.md con estructura real
   - [ ] Registrar ADRs 002-009 en docs/decisions.md
   - [ ] Actualizar docs/onboarding.md con comandos reales
   - [ ] Actualizar .env.example con variables del proyecto
   - [ ] Actualizar README.md con descripción del producto
   - [ ] Actualizar globs de frontend.mdc y backend.mdc
-  - [ ] Crear prompts 01-03 (fase 1: fundación)
+  - [ ] Crear prompts 01-03 (fase 1: fundación) — prompts ya en docs/prompts/; falta ejecutar 02-03
   - [ ] Crear prompts 04-06 (fase 2: backend core)
   - [ ] Crear prompt 07 (fase 3: pyRevit push)
   - [ ] Crear prompts 08-10 (fase 4: frontend)
   - [ ] Crear prompt 11 (fase 5: IA)
   - [ ] Crear prompt 12 (fase 6: deploy)
-- **Bloqueadores:** ninguno.
+- **Bloqueadores:** `passlib` + `bcrypt>=5` incompatible al generar hashes; usar `bcrypt.hashpw` directamente hasta el prompt 03 (auth).
 
 ### Protocolo de cierre de sesión
 

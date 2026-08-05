@@ -48,5 +48,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# ─── Datos locales (SQLite) ──────────────────────────────────────────────────
+apps/api/data/
+*.db
+
 # ─── Miscelánea ──────────────────────────────────────────────────────────────
 docs/prompts/
+
