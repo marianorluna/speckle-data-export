@@ -1,0 +1,13 @@
+---
+description: Git atómico, Conventional Commits en inglés, sin comandos sin orden
+alwaysApply: true
+---
+
+# Control de versiones (Git atómico)
+
+- **Sin Git sin orden:** Prohibido ejecutar `git add`, `git commit`, `git push` u otros comandos de control de versiones salvo petición explícita en el chat.
+- **Un commit = un cambio lógico:** Una sola intención (fix, feature, refactor). No mezclar negocio, estilos cosméticos y config no relacionada.
+- **Conventional Commits:** Formato `<tipo>(scope opcional): <descripción>` en minúsculas. Tipos: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `style`, `ci`, `build`. Tipos y descripción en **inglés**, salvo otro idioma pedido. Describe el *porqué*, sin listar archivos. Ejemplos: `feat(auth): allow login with magic link`, `fix(api): prevent double charge on network retry`.
+- **Staging selectivo:** Solo archivos de la tarea. Nunca `.env`, credenciales, secretos ni artefactos generados.
+- **Sin atajos destructivos:** Prohibido `--force` en `main`/`master`, `--no-verify`, `reset --hard` o `amend` sin autorización explícita.
+- Si el trabajo no cabe en un cambio lógico limpio, propón varios commits atómicos (o varias tareas) antes de consolidar.

@@ -1,0 +1,17 @@
+---
+description: Capas de dominio/backend, SOLID, DI, errores y concurrencia
+globs: "apps/api/**/*.py"
+alwaysApply: false
+---
+
+# Backend / dominio
+
+- **Principios:** SOLID y Composition over Inheritance. Dominio aislado de infraestructura.
+- **Capas:**
+  - **Models / Entities:** esquema, validaciones nativas, métodos del modelo. Sin orquestación.
+  - **Controllers / Handlers:** I/O (HTTP, CLI, eventos). Sin lógica pesada de persistencia ni negocio complejo.
+  - **Services / Use Cases:** lógica de negocio pura. Los handlers los invocan.
+  - **Routes / Adapters:** mapean entradas a handlers; middlewares/guards de auth/validación.
+- **DI:** Prefiere inyección de dependencias (o equivalente idiomático) para testabilidad.
+- **Operaciones críticas:** dinero, inventario, estado compartido → transacciones o updates atómicos con filtros de estado, según el store del proyecto.
+- **Errores:** Prohibido `catch` vacío o solo `console.log(err)`. Propagar al handler global con mensajes claros. API: `{ success: false, error: "Mensaje claro de error" }`.

@@ -1,0 +1,14 @@
+---
+description: Tipado, naming, inmutabilidad, env vars y código asíncrono
+alwaysApply: true
+---
+
+# Estilo de código
+
+- **Tipado estricto:** Cuando el lenguaje lo permita. Prohibido `any` (o equivalente que anule el tipado) salvo justificación acordada.
+- **Naming descriptivo:** Nombres que revelen intención. El código se lee más de lo que se escribe.
+- **Inmutabilidad:** Prefiere `const` (o equivalente) y estructuras inmutables. Minimiza side effects en funciones puras.
+- **Declarativo > imperativo:** Prefiere APIs declarativas del lenguaje antes que bucles o flujos imperativos innecesarios.
+- **Variables de entorno:** Nunca hardcodees credenciales, puertos, URLs de BD o secretos. Usa el mecanismo del runtime (`process.env`, `import.meta.env`, etc.).
+- **Async moderno:** `async/await` (o equivalente idiomático). Evita callback hell y cadenas largas de `.then()`.
+- **Docs actualizadas:** Si hay Context7 u otra fuente de docs del stack, consúltala antes de inventar APIs o usar wrappers legacy.

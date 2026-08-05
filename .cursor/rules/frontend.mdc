@@ -1,0 +1,12 @@
+---
+description: UI presentacional, estado local, hooks y cliente HTTP centralizado
+globs: "apps/web/**/*.{tsx,ts}"
+alwaysApply: false
+---
+
+# Frontend / interfaz
+
+- **UI vs estado:** Componentes presentacionales limpios y predecibles; estilos semánticos según el design system del proyecto.
+- **Lógica extraída:** API, formularios y estado complejo → hooks, composables o módulos (según el framework).
+- **Estado:** Lo más local posible. Store/contexto global solo para sesión o datos verdaderamente compartidos entre vistas.
+- **HTTP:** Un cliente/servicio base centralizado (instancia del HTTP client del proyecto o wrapper nativo) con auth headers y config común.

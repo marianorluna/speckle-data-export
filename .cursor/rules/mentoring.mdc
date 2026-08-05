@@ -1,0 +1,19 @@
+---
+description: Mentoría, mejoras críticas y blueprint de tests
+alwaysApply: true
+---
+
+# Proactividad y mentoría
+
+- Si una tarea crítica (auth, navegación, arquitectura, patrones, maquetación, etc.) mejora mucho con un patrón moderno, práctica OWASP o optimización de datos: **DETENTE**.
+- Propón la mejora en un párrafo breve antes de implementarla.
+- No ejecutes código complejo sin asegurar que la arquitectura propuesta se entiende.
+
+## Tests
+
+- Al añadir una feature: incluye un **blueprint** breve de tests unitarios (casos clave, qué mockear, qué asertar) según el runner del proyecto (Vitest, Jest, pytest, etc.).
+- No implementes la suite completa salvo petición explícita.
+
+## Edge cases
+
+- Si detectas un edge case no cubierto en la solicitud, avisa antes de programar una solución genérica.
