@@ -55,26 +55,27 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
 
 ## 4. Estado actual
 
-- **Última sesión:** 2026-08-05 — Ejecutado prompt 02: dominio Pydantic (`BimElement`, `ParameterSnapshot`, `QcFinding`, `User`), modelos SQLAlchemy, Alembic async + migración inicial, `BaseRepository`.
-- **Foco actual:** prompt 03 (auth JWT).
+- **Última sesión:** 2026-08-05 — Ejecutado prompt 03: auth JWT (`bcrypt` nativo + PyJWT), seed admin, `/api/auth/token` + `/me`, login frontend con React Router.
+- **Foco actual:** prompt 04 (backend core — elementos / ingestión Speckle, según `docs/prompts/`).
 - **Checklist:**
   - [x] Definir stack completo en AGENTS.md §2
   - [x] Rellenar contexto de negocio en AGENTS.md §3
   - [x] Ejecutar prompt 01 (fundación monorepo: API `/health` + web Vite)
   - [x] Ejecutar prompt 02 (dominio + DB: entidades, ORM, Alembic, repo base)
+  - [x] Ejecutar prompt 03 (auth JWT: seed, token, `/me`, login UI)
   - [ ] Actualizar docs/architecture.md con estructura real
   - [ ] Registrar ADRs 002-009 en docs/decisions.md
   - [ ] Actualizar docs/onboarding.md con comandos reales
-  - [ ] Actualizar .env.example con variables del proyecto
+  - [x] Actualizar .env.example con variables del proyecto (hash via `bcrypt` nativo)
   - [ ] Actualizar README.md con descripción del producto
   - [ ] Actualizar globs de frontend.mdc y backend.mdc
-  - [ ] Crear prompts 01-03 (fase 1: fundación) — prompts ya en docs/prompts/; falta ejecutar 03
+  - [x] Crear prompts 01-03 (fase 1: fundación) — ejecutados
   - [ ] Crear prompts 04-06 (fase 2: backend core)
   - [ ] Crear prompt 07 (fase 3: pyRevit push)
   - [ ] Crear prompts 08-10 (fase 4: frontend)
   - [ ] Crear prompt 11 (fase 5: IA)
   - [ ] Crear prompt 12 (fase 6: deploy)
-- **Bloqueadores:** `passlib` + `bcrypt>=5` incompatible al generar hashes; usar `bcrypt.hashpw` directamente hasta el prompt 03 (auth).
+- **Bloqueadores:** Liberar puerto `8000` si queda un proceso zombie (auth nueva verificada en `:8001`). Rutas de escritura (`/api/elements`, etc.) aún no existen — `get_current_user` listo para engancharlas.
 
 ### Protocolo de cierre de sesión
 

@@ -1,16 +1,23 @@
-"""FastAPI dependency injection placeholders (settings, DB session)."""
+"""FastAPI dependency injection (settings, DB session, current user)."""
 
 from collections.abc import AsyncIterator
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.domain.user import User
+from src.infrastructure.auth.jwt import InvalidTokenError, decode_access_token
+from src.infrastructure.db.user_repository import UserRepository
+
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 _ENV_FILE = _REPO_ROOT / ".env"
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
 
 class Settings(BaseSettings):
@@ -52,3 +59,34 @@ async def get_session() -> AsyncIterator[AsyncSession]:
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+
+
+async def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    session: SessionDep,
+    settings: SettingsDep,
+) -> User:
+    """Resolve the JWT bearer token to an active domain ``User``."""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = decode_access_token(token, secret=settings.jwt_secret)
+    except InvalidTokenError as exc:
+        raise credentials_exception from exc
+
+    email = payload.get("sub")
+    if not isinstance(email, str) or not email:
+        raise credentials_exception
+
+    repo = UserRepository(session)
+    row = await repo.get_by_email(email)
+    if row is None or not row.is_active:
+        raise credentials_exception
+
+    return User.model_validate(row)
+
+
+CurrentUser = Annotated[User, Depends(get_current_user)]

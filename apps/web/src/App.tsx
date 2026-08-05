@@ -1,11 +1,22 @@
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { DashboardPage } from "./pages/Dashboard";
+import { LoginPage } from "./pages/Login";
+
 function App() {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-50">
-      <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-        BIM Dashboard
-      </h1>
-    </main>
-  )
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+        </Route>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;
