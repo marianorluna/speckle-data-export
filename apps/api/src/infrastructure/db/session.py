@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from src.api.deps import get_settings
+from src.infrastructure.db.models import Base
 
 _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
@@ -41,6 +42,7 @@ def init_engine() -> AsyncEngine:
     _engine = create_async_engine(
         settings.database_url,
         echo=False,
+        connect_args={"check_same_thread": False},
     )
     _session_factory = async_sessionmaker(
         _engine,
@@ -56,6 +58,13 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
         init_engine()
     assert _session_factory is not None
     return _session_factory
+
+
+async def init_db() -> None:
+    """Create all tables (dev convenience; prefer Alembic in production)."""
+    engine = init_engine()
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
 
 
 async def dispose_engine() -> None:

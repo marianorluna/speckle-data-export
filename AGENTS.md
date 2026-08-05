@@ -55,19 +55,20 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
 
 ## 4. Estado actual
 
-- **Última sesión:** 2026-08-05 — Ejecutado prompt 01: monorepo `apps/api` (FastAPI + SQLAlchemy async) y `apps/web` (Vite + React + Tailwind v4); `/health` y UI "BIM Dashboard" verificados.
-- **Foco actual:** prompt 02 (dominio + DB) — entidades y modelos SQLAlchemy.
+- **Última sesión:** 2026-08-05 — Ejecutado prompt 02: dominio Pydantic (`BimElement`, `ParameterSnapshot`, `QcFinding`, `User`), modelos SQLAlchemy, Alembic async + migración inicial, `BaseRepository`.
+- **Foco actual:** prompt 03 (auth JWT).
 - **Checklist:**
   - [x] Definir stack completo en AGENTS.md §2
   - [x] Rellenar contexto de negocio en AGENTS.md §3
   - [x] Ejecutar prompt 01 (fundación monorepo: API `/health` + web Vite)
+  - [x] Ejecutar prompt 02 (dominio + DB: entidades, ORM, Alembic, repo base)
   - [ ] Actualizar docs/architecture.md con estructura real
   - [ ] Registrar ADRs 002-009 en docs/decisions.md
   - [ ] Actualizar docs/onboarding.md con comandos reales
   - [ ] Actualizar .env.example con variables del proyecto
   - [ ] Actualizar README.md con descripción del producto
   - [ ] Actualizar globs de frontend.mdc y backend.mdc
-  - [ ] Crear prompts 01-03 (fase 1: fundación) — prompts ya en docs/prompts/; falta ejecutar 02-03
+  - [ ] Crear prompts 01-03 (fase 1: fundación) — prompts ya en docs/prompts/; falta ejecutar 03
   - [ ] Crear prompts 04-06 (fase 2: backend core)
   - [ ] Crear prompt 07 (fase 3: pyRevit push)
   - [ ] Crear prompts 08-10 (fase 4: frontend)
