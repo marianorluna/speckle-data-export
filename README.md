@@ -38,19 +38,46 @@ Dashboard BIM con actualizacion en tiempo real para modelos de Revit. Visualiza 
 
 ## Arranque rapido
 
-```bash
-# Backend
-cd apps/api
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn src.api.main:app --reload --port 8000
+Backend y frontend van en **dos terminales** distintas. Antes del primer arranque, copia `.env.example` → `.env` y rellena las variables (ver [`docs/onboarding.md`](docs/onboarding.md)).
 
-# Frontend
-cd apps/web
-npm install && npm run dev
+### Primera vez (setup)
+
+**Terminal 1 — Backend**
+
+```bash
+cd apps/api
+python -m venv .venv
+source .venv/Scripts/activate   # Git Bash / Windows. En macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-Ver [`docs/onboarding.md`](docs/onboarding.md) para instrucciones completas.
+**Terminal 2 — Frontend**
+
+```bash
+cd apps/web
+npm install
+```
+
+### Cada sesion de desarrollo
+
+**Terminal 1 — Backend** (API en `http://localhost:8000`, docs en `/docs`)
+
+```bash
+cd apps/api
+source .venv/Scripts/activate   # Git Bash / Windows. En macOS/Linux: source .venv/bin/activate
+uvicorn src.api.main:app --reload --port 8000
+```
+
+**Terminal 2 — Frontend** (dashboard en `http://localhost:5173`)
+
+```bash
+cd apps/web
+npm run dev
+```
+
+`pip install` y `npm install` solo hacen falta de nuevo si cambian las dependencias.
+
+Ver [`docs/onboarding.md`](docs/onboarding.md) para instrucciones completas (DB, pyRevit, troubleshooting).
 
 ## Licencia
 
