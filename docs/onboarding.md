@@ -243,12 +243,69 @@ PY
 
 O con `websocat` si lo tienes instalado: `websocat ws://localhost:8000/ws/dashboard`.
 
-### pyRevit (opcional)
+### pyRevit (push en tiempo real)
 
-1. Instalar pyRevit desde https://github.com/eirannejad/pyRevit
-2. Copiar el script de `apps/api/scripts/revit_push.py` a la carpeta de scripts de pyRevit (prompt 07)
-3. Configurar `API_WS_URL` → `ws://localhost:8000/ws/revit` y la misma `REVIT_API_KEY` que en `.env`
-4. En Revit, ejecutar el script. Los cambios de elementos se enviaran automaticamente.
+Arquitectura final ([ADR-010](./decisions.md)): **la red no vive dentro de Revit**.
+El pushbutton solo escribe cambios en un archivo spool; un proceso relay (CPython)
+los envia al API.
+
+```
+Revit (IronPython)                          Repo (CPython, venv)
+pushbutton: DocumentChanged -> JSONL   ->   revit_push_relay.py -> /ws/revit
+%LOCALAPPDATA%\BIMDashboard\revit-spool.jsonl
+```
+
+El handler se registra en el **primer clic** del boton (delegate fuerte en
+`AppDomain` + `bundle.yaml` `engine.persistent: true`). Sin `startup.py`, sin
+ventana al arrancar Revit. Cada edicion con push ON escribe al spool al acto
+(no hace falta un segundo clic para flush).
+
+1. Instalar pyRevit: https://github.com/eirannejad/pyRevit
+2. Estructura en tu extension:
+
+```
+arqfi.extension/
+  arqfi/                     # paquete (mismo nombre que la extension)
+    __init__.py              # vacio
+    config.py
+    element_extractor.py
+  Datos.tab/
+    Exportar.panel/
+      Dashboard.pushbutton/
+        script.py            # ON/OFF + registro del handler
+        bundle.yaml          # engine.persistent: true
+        on.png / off.png     # icono via script.toggle_icon
+```
+
+Copia `config.py`, `element_extractor.py`, `script.py`, `bundle.yaml` desde
+`apps/api/scripts/revit_push/`; crea `arqfi/__init__.py` vacio. Anade
+`on.png` / `off.png` en el pushbutton. **Borra** `startup.py` de la raiz si lo
+tenias de pruebas anteriores.
+
+3. `pyRevit > Reload` basta (no hace falta reiniciar Revit).
+4. Arrancar el relay (desde `apps/api`, venv activo, API en :8000):
+
+```bash
+python -m scripts.revit_push_relay
+```
+
+El relay lee `REVIT_API_KEY` del `.env` y sigue el spool. Reconecta solo si cae.
+Hazlo en cada sesion de edicion (no es solo un test).
+
+5. En Revit: pulsa **BIM Push** → icono ON. Modifica un elemento → el spool
+   crece al instante → relay `ack elements_processed=N` → SQLite
+   `source = "revit_ws"`. Otro clic = OFF (pausa). El script cierra las
+   ventanas de output para no acumularlas.
+
+> Sin red ni hilos dentro de Revit. Errores graves se muestran con TaskDialog;
+> los writes al spool son silenciosos.
+
+Verificacion del contrato **sin** Revit (API levantada, desde `apps/api`):
+
+```bash
+python -m scripts.probe_revit_ws          # WS directo
+python -m scripts.revit_push_relay --self-test && python -m scripts.revit_push_relay
+```
 
 ---
 
@@ -264,7 +321,11 @@ O con `websocat` si lo tienes instalado: `websocat ws://localhost:8000/ws/dashbo
 | `skipped: true` en `/api/admin/ingest` | Commit ya en `processed_commits` (poller) | Normal; usar `{"force": true}` o contar filas en SQLite |
 | `sqlite3: command not found` | CLI no instalado | Usar el one-liner Python de la seccion 6.1 |
 | `npm run dev` falla | Node version antigua | Usar Node 20+ (`node -v`) |
-| Puerto ocupado | Otro proceso usa :8000 o :5173 | Cambiar en `.env` o matar el proceso |
+| `invalid api_key` en `/ws/revit` | `REVIT_API_KEY` en `.env` no coincide con la usada | Revisar `.env`; reiniciar relay |
+| Revit se bloquea al usar el push | Red/hilos dentro de Revit (arquitectura vieja) | Usar el spool + `revit_push_relay` de esta seccion |
+| Icono ON pero spool no crece | Handler GC'd (sin `persistent` / sin delegate fuerte) | Copiar `bundle.yaml` actual + `script.py`; Reload; primer clic de nuevo |
+| Relay cierra con codigo 4000 | Heartbeat sin `pong` del relay | Deuda conocida; reconecta solo. Fix futuro: responder pong |
+| Encoding / `SyntaxError` en IronPython | Non-ASCII o `from __future__ import annotations` | Mantener ASCII + `# -*- coding: utf-8 -*-` |
 
 ---
 

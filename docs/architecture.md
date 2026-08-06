@@ -48,6 +48,11 @@ data-speckle/
 │   │   │       ├── routes/           # elements, auth, chat, ws
 │   │   │       ├── deps.py           # Dependency injection
 │   │   │       └── main.py           # Entry point
+│   │   ├── scripts/
+│   │   │   ├── revit_push/           # Fuente pyRevit (copiar a la extension)
+│   │   │   ├── revit_push_relay.py   # CPython: spool JSONL → /ws/revit
+│   │   │   ├── probe_revit_ws.py
+│   │   │   └── probe_speckle.py
 │   │   ├── tests/
 │   │   ├── requirements.txt
 │   │   ├── Dockerfile
@@ -92,7 +97,9 @@ data-speckle/
 flowchart TB
     subgraph RevitPC [PC con Revit]
         Revit[Revit + Speckle Connector]
-        PyRevit[pyRevit: DocumentChanged hook]
+        PyRevit["pyRevit pushbutton: DocumentChanged → JSONL"]
+        Spool["%LOCALAPPDATA%\\BIMDashboard\\revit-spool.jsonl"]
+        Relay["revit_push_relay.py (CPython)"]
     end
 
     subgraph VPS [VPS Coolify - Docker Compose]
@@ -107,8 +114,10 @@ flowchart TB
     end
 
     Revit -->|"Send (manual/periodico)"| Speckle
-    Revit -->|"Eventos DocumentChanged"| PyRevit
-    PyRevit -->|"WS push (JSON ligero)"| API
+    Revit -->|"DocumentChanged"| PyRevit
+    PyRevit -->|"append JSONL (sin red)"| Spool
+    Spool -->|"tail"| Relay
+    Relay -->|"WS /ws/revit + REVIT_API_KEY"| API
     API -->|"Poll GraphQL (commits)"| Speckle
     API -->|"Normalizar + guardar"| DB
     API -->|"WS broadcast (KPIs update)"| Web
@@ -126,11 +135,12 @@ flowchart TB
    - El caso de uso `IngestCommit` aplana el arbol de objetos Speckle a filas de SQLite (element_id, category, level, params...).
    - El frontend carga el viewer `@speckle/viewer` apuntando al mismo stream/commit.
 
-2. **Tiempo real via pyRevit (metricas KPIs):**
-   - pyRevit engancha el evento `DocumentChanged` de la Revit API.
-   - Envia JSON ligero por WebSocket al endpoint `/ws/revit` de FastAPI.
-   - FastAPI actualiza la fila correspondiente en SQLite y emite broadcast a todos los clientes web conectados via `/ws/dashboard`.
-   - El frontend actualiza graficos y tabla sin recargar.
+2. **Tiempo real via pyRevit + relay (metricas KPIs) — ADR-010:**
+   - El pushbutton (IronPython, `engine.persistent`) registra `DocumentChanged` con delegate fuerte en `AppDomain` (primer clic ON).
+   - Cada cambio se escribe al acto en el spool JSONL (sin sockets, sin hilos). ON/OFF solo pausa el writer; icono `on.png`/`off.png`.
+   - `revit_push_relay.py` (CPython, venv del API) hace tail del spool, autentica con `REVIT_API_KEY` y empuja a `/ws/revit`.
+   - FastAPI upserta en SQLite (`source=revit_ws`) y hace broadcast a `/ws/dashboard`.
+   - **Por que no WS directo desde Revit:** hilos / ClientWebSocket / CPython dentro de Revit 2027+ crashean el host.
 
 3. **Consultas NL (IA):**
    - Usuario escribe en el panel de chat del dashboard.

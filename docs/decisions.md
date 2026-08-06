@@ -124,7 +124,7 @@ Registro de las decisiones técnicas relevantes del proyecto. Una entrada por de
   1. Solo Speckle — visor 3D nativo y commits historicos, pero sin actualizacion en tiempo real (depende de Send manual).
   2. Solo WebSocket custom — metricas en tiempo real, pero sin visor 3D ni historial de commits.
   3. Hibrido Speckle + WebSocket — Speckle para geometria 3D + historial; WebSocket para metricas/KPIs en vivo.
-- **Decision:** Arquitectura hibrida. Speckle gestiona el 3D y el historial (cada Send genera un commit consultable). El WebSocket (pyRevit → FastAPI → frontend) actualiza metricas en tiempo real entre Sends. Ambos convergen en la misma tabla SQLite: Speckle da el snapshot completo; WebSocket actualiza campos incrementales.
+- **Decision:** Arquitectura hibrida. Speckle gestiona el 3D y el historial (cada Send genera un commit consultable). El WebSocket (via spool+relay, ADR-010) actualiza metricas en tiempo real entre Sends. Ambos convergen en la misma tabla SQLite: Speckle da el snapshot completo; WebSocket actualiza campos incrementales.
 - **Consecuencias:** Dos fuentes de verdad que deben reconciliarse (el ultimo commit de Speckle siempre gana en caso de conflicto). Mayor complejidad inicial pero cada canal resuelve su problema de forma optima.
 
 ---
@@ -153,5 +153,20 @@ Registro de las decisiones técnicas relevantes del proyecto. Una entrada por de
   2. Speckle Server Docker self-hosted — sin limites pero requiere Postgres + Redis + speckle-server en el VPS desde el dia 1.
 - **Decision:** Speckle Cloud Free Tier para el MVP. El limite de 1 proyecto no afecta al MVP (un solo modelo/stream). La API es identica en ambos casos: migrar a self-hosted solo requiere cambiar la variable SPECKLE_SERVER_URL en .env y reconfigurar el connector de Revit. El prompt 12-deploy.md documenta la migracion completa.
 - **Consecuencias:** Dependencia de servicio externo (Speckle Cloud). Limite de storage (~5 GB) suficiente para modelos de prueba. Sin coste. Migracion a self-hosted no requiere cambios de codigo.
+
+---
+
+### ADR-010 — Spool JSONL + relay CPython (sin red en Revit)
+
+- **Fecha:** 2026-08-07
+- **Estado:** Aceptada
+- **Contexto:** El canal live de ADR-007 necesita empujar `DocumentChanged` a `/ws/revit`. En Revit 2027.1 + pyRevit 6.5.3 (IronPython 2.7), cualquier red o hilo dentro del proceso Revit (ClientWebSocket, `#! python3`, asyncio en background) provoca errores irrecuperables. Ademas, un handler Python registrado desde un pushbutton sin motor persistente se pierde por GC al acabar el script.
+- **Opciones consideradas:**
+  1. WS directo desde pyRevit (IronPython + .NET ClientWebSocket / hilos) — falla / crashea el host.
+  2. CPython embebido en el boton (`#! python3`) — inestable con Revit 2027 / DesktopConnector.
+  3. `startup.py` de extension — funciona (motor persistente) pero abre ventana `[extension]` al arrancar Revit.
+  4. Spool JSONL en disco + proceso relay CPython fuera de Revit — sin red en el host; testeable; relay manual por sesion.
+- **Decision:** El pushbutton solo escribe al spool (`%LOCALAPPDATA%\BIMDashboard\revit-spool.jsonl`). `scripts/revit_push_relay.py` (venv del API, `websockets`) hace tail → auth `REVIT_API_KEY` → `/ws/revit`. Handler con `EventHandler[...]` fuerte + estado en `AppDomain` + `bundle.yaml` `engine.persistent: true`. Sin `startup.py`. UI: `script.toggle_icon` + cierre de ventanas de output.
+- **Consecuencias:** Proceso relay obligatorio mientras se edita (no es solo test). Deuda: relay aun no responde `pong` al heartbeat (cierre 4000 + reconnect). Produccion futura: Add-in C# con WebSocket .NET nativo. Verificado e2e: `bim_elements.source=revit_ws`.
 
 ---

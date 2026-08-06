@@ -27,7 +27,7 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
 - **Testing:** pytest (backend) / Vitest (frontend)
 - **IA:** DeepSeek v3 via OpenRouter (text-to-SQL para consultas NL)
 - **Auth:** JWT (pyjwt en backend / jose en frontend)
-- **Revit push:** pyRevit + websocket-client → eventos DocumentChanged
+- **Revit push:** pyRevit (IronPython) → spool JSONL → `revit_push_relay.py` (CPython, `websockets`) → `/ws/revit`
 - **Transporte BIM:** Speckle Cloud Free Tier (conector de Revit + GraphQL API)
 - **Despliegue:** Docker Compose + Coolify en VPS propio
 
@@ -55,8 +55,8 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
 
 ## 4. Estado actual
 
-- **Última sesión:** 2026-08-06 — Prompt 06: WebSockets reales (`/ws/dashboard`, `/ws/revit`, `ConnectionManager`, broadcast tras ingest; stub `ws_hub` sustituido).
-- **Foco actual:** prompt 07 (pyRevit push) o deuda de normalización de `parameters` planos.
+- **Última sesión:** 2026-08-07 — Prompt 07 cerrado: spool+relay live (`source=revit_ws`); botón ON/OFF con icono + `engine.persistent`; docs/ADR-010 alineados.
+- **Foco actual:** prompts 08–10 (frontend).
 - **Checklist:**
   - [x] Definir stack completo en AGENTS.md §2
   - [x] Rellenar contexto de negocio en AGENTS.md §3
@@ -68,19 +68,22 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
   - [x] Documentar PAT Speckle (scopes) y pruebas de ingesta en `docs/onboarding.md`
   - [x] Ejecutar prompt 05 (API REST: elements / KPIs / QC + OpenAPI)
   - [x] Ejecutar prompt 06 (WebSockets: dashboard + revit + heartbeat + broadcast ingest)
-  - [ ] Actualizar docs/architecture.md con estructura real
-  - [ ] Registrar ADRs 002-009 en docs/decisions.md
-  - [ ] Actualizar docs/onboarding.md con resto de comandos reales (pyRevit, Windows activate, etc.)
+  - [x] Ejecutar prompt 07 (pyRevit push: spool + relay + onboarding + probes)
+  - [x] Gate e2e prompt 07: botón ON + editar → spool → relay → `bim_elements.source=revit_ws`
+  - [x] Documentar arquitectura final prompt 07 (`architecture.md`, ADR-010, onboarding, prompt 07)
+  - [x] Registrar ADRs 002-009 en docs/decisions.md
+  - [x] ADR-010 — spool JSONL + relay CPython (sin red dentro de Revit)
+  - [ ] Actualizar docs/onboarding.md con resto de comandos reales (Windows activate, etc.)
   - [x] Actualizar .env.example con variables del proyecto (hash via `bcrypt` nativo; Speckle PAT/project id; `REVIT_API_KEY`)
   - [ ] Actualizar README.md con descripción del producto
   - [ ] Actualizar globs de frontend.mdc y backend.mdc
   - [x] Crear prompts 01-03 (fase 1: fundación) — ejecutados
   - [x] Crear prompts 04-06 (fase 2: backend core) — ejecutados
-  - [ ] Crear prompt 07 (fase 3: pyRevit push)
+  - [x] Crear prompt 07 (fase 3: pyRevit push) — cerrado e2e
   - [ ] Crear prompts 08-10 (fase 4: frontend)
   - [ ] Crear prompt 11 (fase 5: IA)
   - [ ] Crear prompt 12 (fase 6: deploy)
-- **Bloqueadores:** Ninguno. Deuda: `parameters` no son un mapa plano (KPI `missing_fire_rating` poco fiable); filtrar Materials / IDs duplicados; QC sin motor de reglas aún; verificar live `commit_processed` tras ingest admin si se quiere cerrar el gate C e2e.
+- **Bloqueadores:** Ninguno. Deuda: relay sin `pong` al heartbeat (cierre ~4000 y reconnect, ruidoso pero ok); `parameters` no planos; Materials/IDs duplicados; QC sin motor de reglas; live `commit_processed` tras ingest admin.
 
 ### Protocolo de cierre de sesión
 

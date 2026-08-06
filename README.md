@@ -22,7 +22,8 @@ Dashboard BIM con actualizacion en tiempo real para modelos de Revit. Visualiza 
 | Graficos      | Recharts                      |
 | IA            | DeepSeek v3 via OpenRouter    |
 | Auth          | JWT (pyjwt / jose)            |
-| Revit push    | pyRevit + websocket-client    |
+| Revit push    | pyRevit spool JSONL → `revit_push_relay.py` → `/ws/revit` |
+
 | Deploy        | Docker Compose + Coolify VPS  |
 
 ## Documentacion

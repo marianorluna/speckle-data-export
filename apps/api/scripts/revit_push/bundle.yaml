@@ -1,0 +1,9 @@
+title: BIM Push
+tooltip: Start/pause spool of Revit changes (relay script pushes them to the API)
+author: BIM Dashboard
+# Keep IronPython alive after the button script returns so DocumentChanged
+# handlers registered here survive (same idea as extension startup.py).
+engine:
+  clean: false
+  full_frame: true
+  persistent: true
