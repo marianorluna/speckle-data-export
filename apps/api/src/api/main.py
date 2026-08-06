@@ -1,4 +1,4 @@
-"""FastAPI entry point — health check, auth, admin ingest, Speckle poller."""
+"""FastAPI entry point — health, auth, admin ingest, REST read APIs, Speckle poller."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.deps import get_settings
-from src.api.routes import admin, auth
+from src.api.routes import admin, auth, elements, kpis, qc
 from src.infrastructure.db.session import dispose_engine, init_engine
 from src.infrastructure.scheduler import poll_speckle_loop
 
@@ -62,6 +62,9 @@ def create_app() -> FastAPI:
 
     app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
     app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
+    app.include_router(elements.router, prefix="/api/elements", tags=["elements"])
+    app.include_router(kpis.router, prefix="/api/kpis", tags=["kpis"])
+    app.include_router(qc.router, prefix="/api/qc", tags=["qc"])
 
     @app.get("/health")
     async def health() -> dict[str, str]:

@@ -1,16 +1,43 @@
-"""Repositories for BIM elements, snapshots, and processed Speckle commits."""
+"""Repositories for BIM elements, snapshots, processed commits, and QC findings."""
 
 from __future__ import annotations
 
-from sqlalchemy import select
+import re
+from datetime import datetime
+
+from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.infrastructure.db.models import (
     BimElementModel,
     ParameterSnapshotModel,
     ProcessedCommitModel,
+    QcFindingModel,
 )
 from src.infrastructure.db.repository import BaseRepository
+
+_SAFE_JSON_KEY = re.compile(r"^[A-Za-z0-9_ ]{1,128}$")
+
+
+def _json_param_path(param_name: str) -> str:
+    """Build a SQLite ``json_extract`` path for a flat parameter key."""
+    if not _SAFE_JSON_KEY.match(param_name):
+        raise ValueError(
+            "missing_param must be alphanumeric / underscore / space (max 128 chars)"
+        )
+    if " " in param_name:
+        return f'$."{param_name}"'
+    return f"$.{param_name}"
+
+
+def _missing_param_clause(param_name: str):
+    path = _json_param_path(param_name)
+    extracted = func.json_extract(BimElementModel.parameters, path)
+    return or_(
+        extracted.is_(None),
+        extracted == "",
+        extracted == "null",
+    )
 
 
 class ElementRepository(BaseRepository[BimElementModel]):
@@ -35,6 +62,153 @@ class ElementRepository(BaseRepository[BimElementModel]):
         created = existing is None
         row = await self.upsert(filter_by={"element_id": element_id}, values=values)
         return row, created
+
+    def _filter_statement(
+        self,
+        *,
+        category: str | None = None,
+        level: str | None = None,
+        search: str | None = None,
+        missing_param: str | None = None,
+    ) -> Select[tuple[BimElementModel]]:
+        statement = select(BimElementModel)
+        conditions: list[object] = []
+        if category is not None:
+            conditions.append(BimElementModel.category == category)
+        if level is not None:
+            conditions.append(BimElementModel.level == level)
+        if search:
+            pattern = f"%{search}%"
+            conditions.append(
+                or_(
+                    BimElementModel.family.ilike(pattern),
+                    BimElementModel.type_name.ilike(pattern),
+                    BimElementModel.element_id.ilike(pattern),
+                )
+            )
+        if missing_param:
+            conditions.append(_missing_param_clause(missing_param))
+        if conditions:
+            statement = statement.where(and_(*conditions))
+        return statement
+
+    async def list_elements(
+        self,
+        *,
+        category: str | None = None,
+        level: str | None = None,
+        search: str | None = None,
+        missing_param: str | None = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> tuple[list[BimElementModel], int]:
+        """Return filtered page and total matching count."""
+        base = self._filter_statement(
+            category=category,
+            level=level,
+            search=search,
+            missing_param=missing_param,
+        )
+        count_stmt = select(func.count()).select_from(base.subquery())
+        total = int((await self._session.execute(count_stmt)).scalar_one())
+
+        page_stmt = (
+            base.order_by(BimElementModel.id)
+            .offset(skip)
+            .limit(limit)
+        )
+        rows = list((await self._session.execute(page_stmt)).scalars().all())
+        return rows, total
+
+    async def count_by_category(self) -> list[tuple[str, int]]:
+        statement = (
+            select(BimElementModel.category, func.count())
+            .group_by(BimElementModel.category)
+            .order_by(func.count().desc(), BimElementModel.category)
+        )
+        result = await self._session.execute(statement)
+        return [(str(cat), int(count)) for cat, count in result.all()]
+
+    async def count_by_level(self) -> list[tuple[str | None, int]]:
+        statement = (
+            select(BimElementModel.level, func.count())
+            .group_by(BimElementModel.level)
+            .order_by(func.count().desc())
+        )
+        result = await self._session.execute(statement)
+        return [(lvl, int(count)) for lvl, count in result.all()]
+
+    async def compute_kpis(self) -> dict[str, object]:
+        """Aggregate KPIs with SQL (count / sum / group_by / json_extract)."""
+        total = int(
+            (
+                await self._session.execute(
+                    select(func.count()).select_from(BimElementModel)
+                )
+            ).scalar_one()
+        )
+
+        by_category = {
+            category: count for category, count in await self.count_by_category()
+        }
+        by_level: dict[str, int] = {}
+        for level, count in await self.count_by_level():
+            key = level if level is not None else "(none)"
+            by_level[key] = count
+
+        missing_fire = int(
+            (
+                await self._session.execute(
+                    select(func.count())
+                    .select_from(BimElementModel)
+                    .where(_missing_param_clause("fire_rating"))
+                )
+            ).scalar_one()
+        )
+        missing_level = int(
+            (
+                await self._session.execute(
+                    select(func.count())
+                    .select_from(BimElementModel)
+                    .where(
+                        or_(
+                            BimElementModel.level.is_(None),
+                            BimElementModel.level == "",
+                        )
+                    )
+                )
+            ).scalar_one()
+        )
+
+        volume_sum, area_sum, last_updated = (
+            await self._session.execute(
+                select(
+                    func.coalesce(func.sum(BimElementModel.volume), 0.0),
+                    func.coalesce(func.sum(BimElementModel.area), 0.0),
+                    func.max(BimElementModel.updated_at),
+                )
+            )
+        ).one()
+
+        last_commit = (
+            await self._session.execute(
+                select(ProcessedCommitModel.commit_id)
+                .order_by(ProcessedCommitModel.processed_at.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+
+        return {
+            "total_elements": total,
+            "elements_by_category": by_category,
+            "elements_by_level": by_level,
+            "missing_fire_rating": missing_fire,
+            "missing_level": missing_level,
+            "total_volume_m3": float(volume_sum or 0.0),
+            "total_area_m2": float(area_sum or 0.0),
+            "last_updated": last_updated if isinstance(last_updated, datetime) else None,
+            "last_commit_id": last_commit,
+        }
 
 
 class SnapshotRepository(BaseRepository[ParameterSnapshotModel]):
@@ -61,7 +235,7 @@ class SnapshotRepository(BaseRepository[ParameterSnapshotModel]):
 
 
 class ProcessedCommitRepository(BaseRepository[ProcessedCommitModel]):
-    """Tracks Speckle commits already ingested (polling idempotency)."""
+    """Tracks Speckle commits already ingested (polling / ingest idempotency)."""
 
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, ProcessedCommitModel)
@@ -86,3 +260,54 @@ class ProcessedCommitRepository(BaseRepository[ProcessedCommitModel]):
                 "elements_count": elements_count,
             },
         )
+
+    async def list_recent(self, *, limit: int = 20) -> list[ProcessedCommitModel]:
+        statement = (
+            select(ProcessedCommitModel)
+            .order_by(ProcessedCommitModel.processed_at.desc())
+            .limit(limit)
+        )
+        result = await self._session.execute(statement)
+        return list(result.scalars().all())
+
+
+class QcFindingRepository(BaseRepository[QcFindingModel]):
+    """Persistence for quality-control findings."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        super().__init__(session, QcFindingModel)
+
+    async def list_findings(
+        self,
+        *,
+        resolved: bool | None = None,
+        severity: str | None = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> tuple[list[QcFindingModel], int]:
+        statement = select(QcFindingModel)
+        conditions: list[object] = []
+        if resolved is not None:
+            conditions.append(QcFindingModel.resolved == resolved)
+        if severity is not None:
+            conditions.append(QcFindingModel.severity == severity)
+        if conditions:
+            statement = statement.where(and_(*conditions))
+
+        count_stmt = select(func.count()).select_from(statement.subquery())
+        total = int((await self._session.execute(count_stmt)).scalar_one())
+
+        page_stmt = (
+            statement.order_by(QcFindingModel.id.desc()).offset(skip).limit(limit)
+        )
+        rows = list((await self._session.execute(page_stmt)).scalars().all())
+        return rows, total
+
+    async def mark_resolved(self, finding_id: int) -> QcFindingModel | None:
+        row = await self.get_by_id(finding_id)
+        if row is None:
+            return None
+        row.resolved = True
+        await self._session.flush()
+        await self._session.refresh(row)
+        return row
