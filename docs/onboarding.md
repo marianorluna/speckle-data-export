@@ -39,10 +39,50 @@ cp .env.example .env
 
 Abre `.env` y completa los valores. Variables obligatorias:
 
-- `SPECKLE_TOKEN` — token de acceso personal de Speckle
-- `SPECKLE_STREAM_ID` — ID del stream de donde leer datos
+- `SPECKLE_TOKEN` — Personal Access Token (PAT); ver seccion siguiente
+- `SPECKLE_SERVER_URL` — host del proyecto (p. ej. `https://app.speckle.systems`)
+- `SPECKLE_STREAM_ID` — project id (en la UI nueva, Stream ≈ Project)
 - `JWT_SECRET` — clave secreta para firmar tokens JWT
 - `ADMIN_EMAIL` / `ADMIN_PASSWORD_HASH` — credenciales del unico usuario
+
+---
+
+## 2.1 Speckle — token (PAT) y project id
+
+### No confundir con Share tokens
+
+El dialogo **Share this model** y **Project settings → Tokens** crean **share tokens** (enlaces de solo lectura para el viewer). **No sirven** para autenticar GraphQL desde este backend.
+
+Necesitas un **Personal Access Token** de tu usuario.
+
+### Crear el PAT
+
+1. Entra en [https://app.speckle.systems](https://app.speckle.systems) (o el host que uses).
+2. Avatar (abajo/izquierda o arriba) → **Settings** → **Developer** / Access tokens.
+3. **Create token** / New token.
+4. **Name:** p. ej. `bim-dashboard-local` (solo etiqueta).
+5. **Scopes (minimo, Projects):**
+   | Scope | ID | Nivel |
+   |-------|-----|--------|
+   | Core | `project.core` | Read (o el minimo disponible) |
+   | Model | `project.model` | **Create and edit** si no hay Read (no uses Fully manage) |
+   | Version | `project.version` | Read |
+6. Deja en **No access** / 0 scopes: Workspaces, Dashboards, Automate, Account, Server, Invite, Issue, Webhook, etc.
+7. **Create**, copia el token **una sola vez** → `SPECKLE_TOKEN` en `.env`.
+
+### Project id (`SPECKLE_STREAM_ID`)
+
+Con el proyecto abierto, la URL es:
+
+```text
+https://app.speckle.systems/projects/<SPECKLE_STREAM_ID>/...
+```
+
+Copia solo ese id (no el nombre del proyecto ni un share link).
+
+### Server URL
+
+`SPECKLE_SERVER_URL` debe ser **el mismo host** que en el navegador. Si el proyecto esta en `app.speckle.systems` y pones `https://speckle.xyz` (o al reves), GraphQL responde `STREAM_NOT_FOUND`.
 
 ---
 
@@ -106,7 +146,72 @@ npm run dev
 - [ ] API: `GET http://localhost:8000/health` responde `{"status": "ok"}`
 - [ ] Login: `POST http://localhost:8000/api/auth/token` con email/password devuelve JWT
 - [ ] Frontend: la pagina de login carga en `http://localhost:5173`
+- [ ] Speckle / ingesta (prompt 04): ver seccion siguiente
 - [ ] El agente de Cursor responde en espanol (ver `core.mdc`)
+
+---
+
+## 6.1 Verificar ingesta Speckle (prompt 04)
+
+Requisitos: `.env` con PAT + project id + server URL; al menos un Send/version en el proyecto; API en `:8000`; venv activo en `apps/api`.
+
+### A) Sonda (sin escribir en DB)
+
+```bash
+cd apps/api
+source .venv/Scripts/activate   # Linux/mac: source .venv/bin/activate
+python -m scripts.probe_speckle --limit 30
+```
+
+**OK:** imprime `stream: <id> — <nombre>`, un `commit:` y filas `element_id` / `category`.
+
+### B) Login JWT + ingest manual
+
+```bash
+curl -s -X POST http://localhost:8000/api/auth/token \
+  -d "username=TU_ADMIN_EMAIL&password=TU_PASSWORD"
+```
+
+Copia el `access_token` del JSON y:
+
+```bash
+curl -s -X POST http://localhost:8000/api/admin/ingest \
+  -H "Authorization: Bearer PEGA_EL_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+**OK:** `success: true` con `elements_processed` > 0, **o** `skipped: true` / `Commit already processed` si el poller de fondo ya ingirio ese commit.
+
+Forzar re-proceso del mismo commit:
+
+```bash
+curl -s -X POST http://localhost:8000/api/admin/ingest \
+  -H "Authorization: Bearer PEGA_EL_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"force": true}'
+```
+
+### C) Comprobar SQLite (sin CLI `sqlite3`)
+
+```bash
+cd apps/api
+python -c "
+import sqlite3
+c = sqlite3.connect('data/bim.db')
+print('bim_elements', c.execute('SELECT COUNT(*) FROM bim_elements').fetchone()[0])
+print('processed_commits', c.execute('SELECT COUNT(*) FROM processed_commits').fetchone()[0])
+print('sample', c.execute('SELECT element_id, category, level FROM bim_elements LIMIT 5').fetchall())
+"
+```
+
+**OK:** `bim_elements` > 0 y `processed_commits` >= 1.
+
+### D) Polling (opcional)
+
+Con uvicorn en marcha, un **nuevo Send** desde Revit al mismo proyecto deberia anadir otro `commit_id` en `processed_commits` en ~`SPECKLE_POLL_INTERVAL_SECONDS` (default 30).
+
+Detalle del prompt: [`docs/prompts/04-ingesta-datos.md`](./prompts/04-ingesta-datos.md).
 
 ---
 
@@ -125,7 +230,11 @@ npm run dev
 |---------|---------------|---------|
 | `ModuleNotFoundError: No module named 'speckle'` | Dependencias no instaladas | `pip install -r requirements.txt` |
 | `Connection refused` en WebSocket | API no levantada | Verificar `uvicorn` corriendo en :8000 |
-| Error de autenticacion Speckle | Token invalido o caducado | Regenerar token en https://speckle.xyz/profile |
+| Error de autenticacion Speckle / 401 | PAT invalido, caducado o share token | Crear PAT en User settings → Developer (no Project → Tokens) |
+| `STREAM_NOT_FOUND` | `SPECKLE_SERVER_URL` distinto del host del proyecto, o id incorrecto | Alinear URL con el browser; usar id de `/projects/<id>` |
+| `probe_speckle` → 0 elements | Proyecto sin Send / sin objetos con `category` | Enviar modelo desde Revit Connector |
+| `skipped: true` en `/api/admin/ingest` | Commit ya en `processed_commits` (poller) | Normal; usar `{"force": true}` o contar filas en SQLite |
+| `sqlite3: command not found` | CLI no instalado | Usar el one-liner Python de la seccion 6.1 |
 | `npm run dev` falla | Node version antigua | Usar Node 20+ (`node -v`) |
 | Puerto ocupado | Otro proceso usa :8000 o :5173 | Cambiar en `.env` o matar el proceso |
 

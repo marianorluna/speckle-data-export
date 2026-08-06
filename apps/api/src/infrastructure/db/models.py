@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -89,3 +89,17 @@ class UserModel(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class ProcessedCommitModel(Base):
+    """Speckle commits already ingested (polling / ingest idempotency)."""
+
+    __tablename__ = "processed_commits"
+
+    commit_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    stream_id: Mapped[str] = mapped_column(String(128), index=True)
+    processed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
+    elements_count: Mapped[int] = mapped_column(Integer, default=0)

@@ -55,27 +55,30 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
 
 ## 4. Estado actual
 
-- **Última sesión:** 2026-08-05 — Ejecutado prompt 03: auth JWT (`bcrypt` nativo + PyJWT), seed admin, `/api/auth/token` + `/me`, login frontend con React Router.
-- **Foco actual:** prompt 04 (backend core — elementos / ingestión Speckle, según `docs/prompts/`).
+- **Última sesión:** 2026-08-06 — Prompt 04 verificado (probe + 7329 filas en `bim_elements`) y documentado (token Speckle/scopes + comandos de prueba en onboarding).
+- **Foco actual:** prompt 05 (API REST elementos / KPIs) o prompt 06 (WebSockets reales; hoy solo stub).
 - **Checklist:**
   - [x] Definir stack completo en AGENTS.md §2
   - [x] Rellenar contexto de negocio en AGENTS.md §3
   - [x] Ejecutar prompt 01 (fundación monorepo: API `/health` + web Vite)
   - [x] Ejecutar prompt 02 (dominio + DB: entidades, ORM, Alembic, repo base)
   - [x] Ejecutar prompt 03 (auth JWT: seed, token, `/me`, login UI)
+  - [x] Ejecutar prompt 04 (ingesta Speckle: cliente, IngestCommit, poller, `/api/admin/ingest`)
+  - [x] Verificar prompt 04 contra stream Speckle real (`probe_speckle` + SQLite + skip idempotente)
+  - [x] Documentar PAT Speckle (scopes) y pruebas de ingesta en `docs/onboarding.md`
   - [ ] Actualizar docs/architecture.md con estructura real
   - [ ] Registrar ADRs 002-009 en docs/decisions.md
-  - [ ] Actualizar docs/onboarding.md con comandos reales
-  - [x] Actualizar .env.example con variables del proyecto (hash via `bcrypt` nativo)
+  - [ ] Actualizar docs/onboarding.md con resto de comandos reales (pyRevit, Windows activate, etc.)
+  - [x] Actualizar .env.example con variables del proyecto (hash via `bcrypt` nativo; Speckle PAT/project id)
   - [ ] Actualizar README.md con descripción del producto
   - [ ] Actualizar globs de frontend.mdc y backend.mdc
   - [x] Crear prompts 01-03 (fase 1: fundación) — ejecutados
-  - [ ] Crear prompts 04-06 (fase 2: backend core)
+  - [ ] Crear prompts 04-06 (fase 2: backend core) — 04 ejecutado y verificado; faltan 05-06
   - [ ] Crear prompt 07 (fase 3: pyRevit push)
   - [ ] Crear prompts 08-10 (fase 4: frontend)
   - [ ] Crear prompt 11 (fase 5: IA)
   - [ ] Crear prompt 12 (fase 6: deploy)
-- **Bloqueadores:** Liberar puerto `8000` si queda un proceso zombie (auth nueva verificada en `:8001`). Rutas de escritura (`/api/elements`, etc.) aún no existen — `get_current_user` listo para engancharlas.
+- **Bloqueadores:** Ninguno para prompt 05. Deuda 04: filtrar Materials / IDs duplicados; WS real en prompt 06.
 
 ### Protocolo de cierre de sesión
 
