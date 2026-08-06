@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     speckle_server_url: str = "https://speckle.xyz"
     speckle_stream_id: str = ""
     speckle_poll_interval_seconds: int = 30
+    revit_api_key: str = ""
+    ws_heartbeat_interval: int = 30
 
     @property
     def cors_origin_list(self) -> list[str]:

@@ -13,7 +13,7 @@ from src.infrastructure.db.element_repository import (
     SnapshotRepository,
 )
 from src.infrastructure.speckle import SpeckleApiError, SpeckleClient
-from src.infrastructure.ws_hub import broadcast
+from src.infrastructure.ws_hub import broadcast_commit_processed
 
 router = APIRouter()
 
@@ -94,13 +94,11 @@ async def ingest_commit(
         ) from exc
 
     if not result.skipped:
-        await broadcast(
-            {
-                "type": "ingest.completed",
-                "commit_id": result.commit_id,
-                "stream_id": result.stream_id,
-                "elements_processed": result.elements_processed,
-            }
+        await broadcast_commit_processed(
+            commit_id=result.commit_id,
+            stream_id=result.stream_id,
+            elements_processed=result.elements_processed,
+            source="admin",
         )
 
     return IngestResponse(

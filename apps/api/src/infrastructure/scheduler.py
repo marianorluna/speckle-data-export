@@ -14,7 +14,7 @@ from src.infrastructure.db.element_repository import (
 )
 from src.infrastructure.db.session import get_session_factory
 from src.infrastructure.speckle import SpeckleApiError, SpeckleClient
-from src.infrastructure.ws_hub import broadcast
+from src.infrastructure.ws_hub import broadcast_commit_processed
 
 logger = logging.getLogger(__name__)
 
@@ -72,14 +72,11 @@ async def poll_once() -> None:
     if result.skipped:
         return
 
-    await broadcast(
-        {
-            "type": "ingest.completed",
-            "commit_id": result.commit_id,
-            "stream_id": result.stream_id,
-            "elements_processed": result.elements_processed,
-            "source": "poller",
-        }
+    await broadcast_commit_processed(
+        commit_id=result.commit_id,
+        stream_id=result.stream_id,
+        elements_processed=result.elements_processed,
+        source="poller",
     )
     logger.info(
         "Speckle poll ingested commit=%s elements=%s",

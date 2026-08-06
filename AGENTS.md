@@ -55,8 +55,8 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
 
 ## 4. Estado actual
 
-- **Última sesión:** 2026-08-06 — Prompt 05: API REST (`/api/elements`, `/api/kpis`, `/api/qc`) con envelope `{success,data}` y verificación contra SQLite (7329 elementos).
-- **Foco actual:** prompt 06 (WebSockets reales; hoy solo stub) o deuda de normalización de `parameters` planos.
+- **Última sesión:** 2026-08-06 — Prompt 06: WebSockets reales (`/ws/dashboard`, `/ws/revit`, `ConnectionManager`, broadcast tras ingest; stub `ws_hub` sustituido).
+- **Foco actual:** prompt 07 (pyRevit push) o deuda de normalización de `parameters` planos.
 - **Checklist:**
   - [x] Definir stack completo en AGENTS.md §2
   - [x] Rellenar contexto de negocio en AGENTS.md §3
@@ -67,19 +67,20 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
   - [x] Verificar prompt 04 contra stream Speckle real (`probe_speckle` + SQLite + skip idempotente)
   - [x] Documentar PAT Speckle (scopes) y pruebas de ingesta en `docs/onboarding.md`
   - [x] Ejecutar prompt 05 (API REST: elements / KPIs / QC + OpenAPI)
+  - [x] Ejecutar prompt 06 (WebSockets: dashboard + revit + heartbeat + broadcast ingest)
   - [ ] Actualizar docs/architecture.md con estructura real
   - [ ] Registrar ADRs 002-009 en docs/decisions.md
   - [ ] Actualizar docs/onboarding.md con resto de comandos reales (pyRevit, Windows activate, etc.)
-  - [x] Actualizar .env.example con variables del proyecto (hash via `bcrypt` nativo; Speckle PAT/project id)
+  - [x] Actualizar .env.example con variables del proyecto (hash via `bcrypt` nativo; Speckle PAT/project id; `REVIT_API_KEY`)
   - [ ] Actualizar README.md con descripción del producto
   - [ ] Actualizar globs de frontend.mdc y backend.mdc
   - [x] Crear prompts 01-03 (fase 1: fundación) — ejecutados
-  - [ ] Crear prompts 04-06 (fase 2: backend core) — 04–05 hechos; falta 06
+  - [x] Crear prompts 04-06 (fase 2: backend core) — ejecutados
   - [ ] Crear prompt 07 (fase 3: pyRevit push)
   - [ ] Crear prompts 08-10 (fase 4: frontend)
   - [ ] Crear prompt 11 (fase 5: IA)
   - [ ] Crear prompt 12 (fase 6: deploy)
-- **Bloqueadores:** Ninguno para prompt 06. Deuda: `parameters` no son un mapa plano (KPI `missing_fire_rating` poco fiable); filtrar Materials / IDs duplicados; QC sin motor de reglas aún (lista vacía).
+- **Bloqueadores:** Ninguno. Deuda: `parameters` no son un mapa plano (KPI `missing_fire_rating` poco fiable); filtrar Materials / IDs duplicados; QC sin motor de reglas aún; verificar live `commit_processed` tras ingest admin si se quiere cerrar el gate C e2e.
 
 ### Protocolo de cierre de sesión
 

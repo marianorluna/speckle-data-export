@@ -215,11 +215,39 @@ Detalle del prompt: [`docs/prompts/04-ingesta-datos.md`](./prompts/04-ingesta-da
 
 ---
 
-## 7. Configurar pyRevit (opcional, para tiempo real)
+## 7. WebSockets (tiempo real)
+
+Endpoints (API en `:8000`):
+
+| Canal | URL | Auth |
+|-------|-----|------|
+| Dashboard | `ws://localhost:8000/ws/dashboard` | Ninguna (MVP) |
+| pyRevit | `ws://localhost:8000/ws/revit` | Primer mensaje `{"type":"auth","api_key":"<REVIT_API_KEY>"}` |
+
+- **Heartbeat:** el servidor envia `{"type":"ping"}` cada `WS_HEARTBEAT_INTERVAL` s (default 30). El cliente debe responder `{"type":"pong"}`. Sin pong en 2 intervalos, se cierra la conexion.
+- **Reconexion (frontend, prompt 09):** el hook `useWebSocket` debe usar backoff exponencial `1s → 2s → 4s → … → max 30s`.
+- **Mensajes:** usan `type` (p. ej. `initial_state`, `element_updated`, `commit_processed`); **no** el envelope REST `{success,data}`.
+
+Prueba rapida (con la API levantada):
+
+```bash
+# Escuchar dashboard — debe imprimir initial_state al conectar
+python - <<'PY'
+import asyncio, json, websockets
+async def main():
+    async with websockets.connect("ws://127.0.0.1:8000/ws/dashboard") as ws:
+        print(await ws.recv())
+asyncio.run(main())
+PY
+```
+
+O con `websocat` si lo tienes instalado: `websocat ws://localhost:8000/ws/dashboard`.
+
+### pyRevit (opcional)
 
 1. Instalar pyRevit desde https://github.com/eirannejad/pyRevit
-2. Copiar el script de `apps/api/scripts/revit_push.py` a la carpeta de scripts de pyRevit
-3. Configurar `API_WS_URL` en el script apuntando a `ws://localhost:8000/ws/revit`
+2. Copiar el script de `apps/api/scripts/revit_push.py` a la carpeta de scripts de pyRevit (prompt 07)
+3. Configurar `API_WS_URL` → `ws://localhost:8000/ws/revit` y la misma `REVIT_API_KEY` que en `.env`
 4. En Revit, ejecutar el script. Los cambios de elementos se enviaran automaticamente.
 
 ---
