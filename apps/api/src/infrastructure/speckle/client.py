@@ -108,13 +108,20 @@ class SpeckleClient:
         items = ((stream.get("branches") or {}).get("items")) or []
         return [item for item in items if isinstance(item, dict)]
 
-    async def get_latest_commit(self, stream_id: str) -> dict[str, Any]:
-        """Return the latest commit on ``main``, falling back to any branch."""
+    async def get_latest_commit(
+        self,
+        stream_id: str,
+        *,
+        branch_name: str = "main",
+    ) -> dict[str, Any]:
+        """Return the latest commit on ``branch_name`` (Speckle model / legacy branch)."""
+        preferred = (branch_name or "main").strip() or "main"
         data = await self._graphql(
             """
-            query($id: String!) {
+            query($id: String!, $branchName: String!) {
               stream(id: $id) {
-                branch(name: "main") {
+                branch(name: $branchName) {
+                  name
                   commits(limit: 1) {
                     items {
                       id
@@ -125,7 +132,7 @@ class SpeckleClient:
                     }
                   }
                 }
-                branches(limit: 20) {
+                branches(limit: 50) {
                   items {
                     name
                     commits(limit: 1) {
@@ -142,23 +149,30 @@ class SpeckleClient:
               }
             }
             """,
-            {"id": stream_id},
+            {"id": stream_id, "branchName": preferred},
         )
         stream = data.get("stream") or {}
-        main_items = (((stream.get("branch") or {}).get("commits") or {}).get("items")) or []
-        if main_items and isinstance(main_items[0], dict):
-            return main_items[0]
+        preferred_items = (
+            ((stream.get("branch") or {}).get("commits") or {}).get("items")
+        ) or []
+        if preferred_items and isinstance(preferred_items[0], dict):
+            return preferred_items[0]
 
+        # Exact name miss (typo / renamed): try case-insensitive match among branches.
         for branch in ((stream.get("branches") or {}).get("items")) or []:
+            name = branch.get("name")
+            if not isinstance(name, str):
+                continue
+            if name.lower() != preferred.lower():
+                continue
             items = ((branch.get("commits") or {}).get("items")) or []
             if items and isinstance(items[0], dict):
-                logger.info(
-                    "No commits on main; using branch %s",
-                    branch.get("name"),
-                )
+                logger.info("Using branch %s (matched %s)", name, preferred)
                 return items[0]
 
-        raise SpeckleApiError(f"No commits found for stream {stream_id}")
+        raise SpeckleApiError(
+            f"No commits found for stream {stream_id} on branch/model '{preferred}'"
+        )
 
     async def get_commit(self, stream_id: str, commit_id: str) -> dict[str, Any]:
         """Fetch a specific commit by id."""
@@ -208,6 +222,8 @@ class SpeckleClient:
         self,
         stream_id: str,
         commit_id: str | None = None,
+        *,
+        branch_name: str = "main",
     ) -> tuple[str, list[NormalizedBimElement]]:
         """Fetch and normalize BIM elements for a commit.
 
@@ -216,7 +232,7 @@ class SpeckleClient:
         if commit_id:
             commit = await self.get_commit(stream_id, commit_id)
         else:
-            commit = await self.get_latest_commit(stream_id)
+            commit = await self.get_latest_commit(stream_id, branch_name=branch_name)
 
         resolved_commit_id = str(commit["id"])
         object_id = commit.get("referencedObject")
@@ -236,8 +252,9 @@ class SpeckleClient:
             elements.append(normalized)
 
         logger.info(
-            "Speckle normalize: stream=%s commit=%s raw=%s elements=%s",
+            "Speckle normalize: stream=%s branch=%s commit=%s raw=%s elements=%s",
             stream_id,
+            branch_name,
             resolved_commit_id,
             len(raw_objects),
             len(elements),

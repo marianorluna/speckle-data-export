@@ -37,6 +37,19 @@ function categoryColor(category: string): string {
   return chartColorAt(hash % 8);
 }
 
+function formatParamValue(value: unknown): string {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value.toFixed(2);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed !== "" && Number.isFinite(Number(trimmed))) {
+      return Number(trimmed).toFixed(2);
+    }
+  }
+  return String(value);
+}
+
 function formatCriticalParams(parameters: Record<string, unknown>): string {
   const parts: string[] = [];
   for (const key of CRITICAL_PARAM_KEYS) {
@@ -44,7 +57,7 @@ function formatCriticalParams(parameters: Record<string, unknown>): string {
     if (value === undefined || value === null || value === "") {
       continue;
     }
-    parts.push(`${key}: ${String(value)}`);
+    parts.push(`${key}: ${formatParamValue(value)}`);
   }
   return parts.length > 0 ? parts.join(" · ") : "—";
 }
@@ -115,7 +128,15 @@ function Pagination({
   );
 }
 
-function ElementsTableBody({ rows }: { rows: BimElement[] }) {
+function ElementsTableBody({
+  rows,
+  selectedElementId,
+  onRowClick,
+}: {
+  rows: BimElement[];
+  selectedElementId?: string | null;
+  onRowClick?: (elementId: string) => void;
+}) {
   if (rows.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-gray-500">
@@ -137,60 +158,73 @@ function ElementsTableBody({ rows }: { rows: BimElement[] }) {
         </tr>
       </thead>
       <tbody>
-        {rows.map((row) => (
-          <tr
-            key={row.id}
-            className="border-b border-gray-100 hover:bg-gray-50"
-          >
-            <td
-              className="px-2 py-2 font-mono text-xs text-gray-700"
-              title={row.element_id}
+        {rows.map((row) => {
+          const selected = row.element_id === selectedElementId;
+          return (
+            <tr
+              key={row.id}
+              className={`border-b border-gray-100 ${
+                selected ? "bg-sky-50" : "hover:bg-gray-50"
+              }`}
             >
-              {truncateId(row.element_id)}
-            </td>
-            <td className="px-2 py-2">
-              <Badge
-                label={row.category}
-                color={categoryColor(row.category)}
-              />
-            </td>
-            <td className="max-w-[14rem] px-2 py-2 text-gray-800">
-              <span className="line-clamp-2">
-                {[row.family, row.type_name].filter(Boolean).join(" / ") ||
-                  "—"}
-              </span>
-            </td>
-            <td className="px-2 py-2">
-              {row.level ? (
-                <Badge label={row.level} color="#64748b" />
-              ) : (
-                <span className="text-gray-400">—</span>
-              )}
-            </td>
-            <td
-              className="max-w-[16rem] truncate px-2 py-2 text-xs text-gray-600"
-              title={formatCriticalParams(row.parameters)}
-            >
-              {formatCriticalParams(row.parameters)}
-            </td>
-            <td className="px-2 py-2">
-              <button
-                type="button"
-                className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
-                title="Disponible con el visor 3D (prompt 10)"
-                disabled
+              <td
+                className="px-2 py-2 font-mono text-xs text-gray-700"
+                title={row.element_id}
               >
-                Seleccionar
-              </button>
-            </td>
-          </tr>
-        ))}
+                {truncateId(row.element_id)}
+              </td>
+              <td className="px-2 py-2">
+                <Badge
+                  label={row.category}
+                  color={categoryColor(row.category)}
+                />
+              </td>
+              <td className="max-w-[14rem] px-2 py-2 text-gray-800">
+                <span className="line-clamp-2">
+                  {[row.family, row.type_name].filter(Boolean).join(" / ") ||
+                    "—"}
+                </span>
+              </td>
+              <td className="px-2 py-2">
+                {row.level ? (
+                  <Badge label={row.level} color="#64748b" />
+                ) : (
+                  <span className="text-gray-400">—</span>
+                )}
+              </td>
+              <td
+                className="max-w-[16rem] truncate px-2 py-2 text-xs text-gray-600"
+                title={formatCriticalParams(row.parameters)}
+              >
+                {formatCriticalParams(row.parameters)}
+              </td>
+              <td className="px-2 py-2">
+                <button
+                  type="button"
+                  className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  disabled={!onRowClick}
+                  onClick={() => onRowClick?.(row.element_id)}
+                >
+                  Seleccionar
+                </button>
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
 }
 
-export function ElementTable() {
+export type ElementTableProps = {
+  selectedElementId?: string | null;
+  onRowClick?: (elementId: string) => void;
+};
+
+export function ElementTable({
+  selectedElementId,
+  onRowClick,
+}: ElementTableProps) {
   const [filters, setFilters] = useState<ElementFilters>({
     skip: 0,
     limit: DEFAULT_LIMIT,
@@ -229,7 +263,11 @@ export function ElementTable() {
                 isFetching ? "opacity-70 transition-opacity" : ""
               }`}
             >
-              <ElementsTableBody rows={data?.data ?? []} />
+              <ElementsTableBody
+                rows={data?.data ?? []}
+                selectedElementId={selectedElementId}
+                onRowClick={onRowClick}
+              />
             </div>
             <div className="shrink-0 border-t border-gray-100 pt-3">
               <Pagination

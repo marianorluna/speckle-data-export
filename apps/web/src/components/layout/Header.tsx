@@ -56,6 +56,11 @@ export function Header({
           }`}
           role="status"
           aria-live="polite"
+          title={
+            connected
+              ? "Conexión en tiempo real activa"
+              : "Sin conexión en tiempo real. Los datos pueden estar desactualizados."
+          }
         >
           <span
             className={`h-2 w-2 shrink-0 rounded-full ${

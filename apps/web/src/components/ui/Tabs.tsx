@@ -18,6 +18,11 @@ type TabsProps = {
   className?: string;
   /** Classes for the active panel wrapper. */
   panelClassName?: string;
+  /**
+   * Keep visited panels mounted (hidden when inactive) so heavy children
+   * (e.g. Speckle viewer) are not reloaded on every tab switch.
+   */
+  keepMounted?: boolean;
 };
 
 /**
@@ -29,16 +34,30 @@ export function Tabs({
   defaultTabId,
   className = "",
   panelClassName = "",
+  keepMounted = true,
 }: TabsProps) {
   const baseId = useId();
   const initial =
     tabs.find((tab) => tab.id === defaultTabId)?.id ?? tabs[0]?.id ?? "";
   const [activeId, setActiveId] = useState(initial);
+  const [visitedIds, setVisitedIds] = useState(() => new Set<string>([initial]));
   const active = tabs.find((tab) => tab.id === activeId) ?? tabs[0];
 
   if (!active) {
     return null;
   }
+
+  const selectTab = (id: string) => {
+    setActiveId(id);
+    setVisitedIds((prev) => {
+      if (prev.has(id)) {
+        return prev;
+      }
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  };
 
   const onTabKeyDown = (
     event: KeyboardEvent<HTMLButtonElement>,
@@ -54,7 +73,7 @@ export function Tabs({
     if (!next) {
       return;
     }
-    setActiveId(next.id);
+    selectTab(next.id);
     const nextButton = document.getElementById(`${baseId}-tab-${next.id}`);
     nextButton?.focus();
   };
@@ -77,7 +96,7 @@ export function Tabs({
               aria-selected={selected}
               aria-controls={`${baseId}-panel-${tab.id}`}
               tabIndex={selected ? 0 : -1}
-              onClick={() => setActiveId(tab.id)}
+              onClick={() => selectTab(tab.id)}
               onKeyDown={(event) => onTabKeyDown(event, index)}
               className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors sm:px-4 ${
                 selected
@@ -91,14 +110,39 @@ export function Tabs({
         })}
       </div>
 
-      <div
-        id={`${baseId}-panel-${active.id}`}
-        role="tabpanel"
-        aria-labelledby={`${baseId}-tab-${active.id}`}
-        className={`min-h-0 flex-1 ${panelClassName}`.trim()}
-      >
-        {active.panel}
-      </div>
+      {keepMounted
+        ? tabs.map((tab) => {
+            if (!visitedIds.has(tab.id)) {
+              return null;
+            }
+            const selected = tab.id === active.id;
+            return (
+              <div
+                key={tab.id}
+                id={`${baseId}-panel-${tab.id}`}
+                role="tabpanel"
+                aria-labelledby={`${baseId}-tab-${tab.id}`}
+                hidden={!selected}
+                className={
+                  selected
+                    ? `flex min-h-0 flex-1 flex-col ${panelClassName}`.trim()
+                    : "hidden"
+                }
+              >
+                {tab.panel}
+              </div>
+            );
+          })
+        : (
+            <div
+              id={`${baseId}-panel-${active.id}`}
+              role="tabpanel"
+              aria-labelledby={`${baseId}-tab-${active.id}`}
+              className={`min-h-0 flex-1 ${panelClassName}`.trim()}
+            >
+              {active.panel}
+            </div>
+          )}
     </div>
   );
 }

@@ -13,6 +13,7 @@ export type KpiData = {
   total_area_m2: number;
   last_updated: string | null;
   last_commit_id: string | null;
+  model_name: string | null;
 };
 
 type KpisResponse = {

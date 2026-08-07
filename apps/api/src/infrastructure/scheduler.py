@@ -48,7 +48,10 @@ async def poll_once() -> None:
     factory = get_session_factory()
     async with SpeckleClient(settings.speckle_server_url, token) as client:
         try:
-            commit = await client.get_latest_commit(stream_id)
+            commit = await client.get_latest_commit(
+                stream_id,
+                branch_name=settings.speckle_branch_name,
+            )
         except SpeckleApiError:
             logger.exception("Speckle poll: failed to read latest commit")
             return
@@ -66,7 +69,11 @@ async def poll_once() -> None:
                 SnapshotRepository(session),
                 processed_repo,
             )
-            result = await use_case.execute(stream_id, commit_id=commit_id)
+            result = await use_case.execute(
+                stream_id,
+                commit_id=commit_id,
+                branch_name=settings.speckle_branch_name,
+            )
             await session.commit()
 
     if result.skipped:

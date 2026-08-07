@@ -80,6 +80,7 @@ async def ingest_commit(
                 stream_id,
                 commit_id=body.commit_id,
                 force=body.force,
+                branch_name=settings.speckle_branch_name,
             )
             await session.commit()
     except SpeckleApiError as exc:

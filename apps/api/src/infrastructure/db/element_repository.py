@@ -120,6 +120,16 @@ class ElementRepository(BaseRepository[BimElementModel]):
         rows = list((await self._session.execute(page_stmt)).scalars().all())
         return rows, total
 
+    async def element_application_id_map(self) -> dict[str, str]:
+        """Map ``element_id`` → Speckle ``applicationId`` (same UniqueId today).
+
+        Selection in ``@speckle/viewer`` uses ``applicationId``; we do not store
+        Speckle object hashes (they change per commit). Identity map is intentional.
+        """
+        statement = select(BimElementModel.element_id).order_by(BimElementModel.element_id)
+        rows = (await self._session.execute(statement)).scalars().all()
+        return {element_id: element_id for element_id in rows}
+
     async def count_by_category(self) -> list[tuple[str, int]]:
         statement = (
             select(BimElementModel.category, func.count())

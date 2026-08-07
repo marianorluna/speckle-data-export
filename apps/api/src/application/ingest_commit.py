@@ -24,6 +24,8 @@ class SpeckleElementsPort(Protocol):
         self,
         stream_id: str,
         commit_id: str | None = None,
+        *,
+        branch_name: str = "main",
     ) -> tuple[str, list[NormalizedBimElement]]: ...
 
 
@@ -63,10 +65,12 @@ class IngestCommit:
         commit_id: str | None = None,
         *,
         force: bool = False,
+        branch_name: str = "main",
     ) -> IngestResult:
         resolved_commit_id, elements = await self._speckle.get_bim_elements(
             stream_id,
             commit_id=commit_id,
+            branch_name=branch_name,
         )
 
         if not force and await self._processed.is_processed(resolved_commit_id):

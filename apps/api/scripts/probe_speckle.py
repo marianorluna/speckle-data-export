@@ -41,6 +41,7 @@ async def run(stream_id: str, commit_id: str | None, limit: int) -> int:
         resolved_commit, elements = await client.get_bim_elements(
             resolved_stream,
             commit_id=commit_id,
+            branch_name=settings.speckle_branch_name,
         )
         print(f"commit: {resolved_commit}")
         print(f"elements: {len(elements)} (showing up to {limit})")

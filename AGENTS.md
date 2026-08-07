@@ -55,8 +55,8 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
 
 ## 4. Estado actual
 
-- **Última sesión:** 2026-08-07 — Prompt 09: dashboard KPIs + Recharts + tabla filtrable; WS vía `WebSocketProvider` compartido.
-- **Foco actual:** prompt 10 (viewer 3D Speckle).
+- **Última sesión:** 2026-08-07 — Prompt 10: visor Speckle + toolbar (medir/sección/zoom) + menú cámara (vistas/ortho/orbit/fullscreen); datos solo Snowdon.
+- **Foco actual:** prompt 11 (chat IA / text-to-SQL).
 - **Checklist:**
   - [x] Definir stack completo en AGENTS.md §2
   - [x] Rellenar contexto de negocio en AGENTS.md §3
@@ -83,10 +83,10 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
   - [x] Crear prompt 07 (fase 3: pyRevit push) — cerrado e2e
   - [x] Crear/ejecutar prompt 08 (fase 4 frontend init)
   - [x] Ejecutar prompt 09 (KPIs, Recharts, tabla + filtros, indicador WS)
-  - [ ] Crear/ejecutar prompt 10 (viewer 3D)
+  - [x] Ejecutar prompt 10 (viewer 3D Speckle + map + selección cruzada)
   - [ ] Crear prompt 11 (fase 5: IA)
   - [ ] Crear prompt 12 (fase 6: deploy)
-- **Bloqueadores:** Ninguno. Deuda: relay sin `pong` al heartbeat (cierre ~4000 y reconnect, ruidoso pero ok); `parameters` no planos; Materials/IDs duplicados; QC sin motor de reglas; live `commit_processed` tras ingest admin; filtro UI «Sin nivel» no soportado (API `missing_param` solo claves JSON, no columna `level`).
+- **Bloqueadores:** Ninguno. Deuda: relay sin `pong` al heartbeat (cierre ~4000 y reconnect, ruidoso pero ok); `parameters` no planos; Materials/IDs duplicados; QC sin motor de reglas; live `commit_processed` tras ingest admin; filtro UI «Sin nivel» no soportado (API `missing_param` solo claves JSON, no columna `level`); mapa `element_id`→`applicationId` es identidad (no se persiste hash Speckle por commit — selección por UniqueId). SQLite alineado a `structure/snowdon-towers-r27` (commit `8ee3c83d81`, 1390 elems).
 
 ### Protocolo de cierre de sesión
 

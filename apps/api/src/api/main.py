@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.connection_manager import manager
 from src.api.deps import get_settings
-from src.api.routes import admin, auth, elements, kpis, qc, ws
+from src.api.routes import admin, auth, elements, kpis, qc, speckle_viewer, ws
 from src.infrastructure.db.session import dispose_engine, init_engine
 from src.infrastructure.scheduler import poll_speckle_loop
 
@@ -89,6 +89,11 @@ def create_app() -> FastAPI:
     app.include_router(elements.router, prefix="/api/elements", tags=["elements"])
     app.include_router(kpis.router, prefix="/api/kpis", tags=["kpis"])
     app.include_router(qc.router, prefix="/api/qc", tags=["qc"])
+    app.include_router(
+        speckle_viewer.router,
+        prefix="/api/speckle",
+        tags=["speckle"],
+    )
     app.include_router(ws.router, tags=["websockets"])
 
     @app.get("/health")

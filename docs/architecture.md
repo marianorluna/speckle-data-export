@@ -59,11 +59,11 @@ data-speckle/
 │   │   └── pyproject.toml
 │   └── web/                          # Frontend React + Vite
 │       ├── src/
-│       │   ├── components/           # Charts, DataTable, LoginForm, ChatPanel
+│       │   ├── components/           # Charts, DataTable, SpeckleViewer + toolbars
 │       │   ├── hooks/                # useWebSocket, useElements, useAuth
 │       │   ├── lib/
 │       │   │   ├── api.ts            # Cliente HTTP centralizado
-│       │   │   └── speckle.ts        # Cliente @speckle/viewer
+│       │   │   └── speckle.ts        # Adapter @speckle/viewer (load, select, tools)
 │       │   ├── pages/                # Login, Dashboard
 │       │   ├── App.tsx
 │       │   └── main.tsx
@@ -133,7 +133,8 @@ flowchart TB
    - Usuario hace Send desde Revit al stream de Speckle.
    - FastAPI hace polling periodico del ultimo commit via GraphQL (o recibe webhook).
    - El caso de uso `IngestCommit` aplana el arbol de objetos Speckle a filas de SQLite (element_id, category, level, params...).
-   - El frontend carga el viewer `@speckle/viewer` apuntando al mismo stream/commit.
+   - El frontend carga el viewer `@speckle/viewer` apuntando al commit del branch configurado (`SPECKLE_BRANCH_NAME` via `/api/speckle/viewer-config`).
+   - Controles propios (no la UI de Speckle Cloud): toolbar inferior (zoom extents, medir, sección) y menú cámara superior-derecha (vistas canónicas, ortográfico, free orbit, fullscreen). Atajos: `Alt+1..5`, `Shift+P`. Ghost filters / panel Info quedan fuera del MVP.
 
 2. **Tiempo real via pyRevit + relay (metricas KPIs) — ADR-010:**
    - El pushbutton (IronPython, `engine.persistent`) registra `DocumentChanged` con delegate fuerte en `AppDomain` (primer clic ON).

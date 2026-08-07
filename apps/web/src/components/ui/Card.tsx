@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 type CardProps = {
   title?: string;
   value?: ReactNode;
-  subtitle?: string;
+  subtitle?: ReactNode;
   icon?: ReactNode;
   children?: ReactNode;
   className?: string;
@@ -37,7 +37,7 @@ export function Card({
               </p>
             ) : null}
             {subtitle ? (
-              <p className="mt-1 text-xs text-gray-400">{subtitle}</p>
+              <div className="mt-1 text-xs text-gray-400">{subtitle}</div>
             ) : null}
           </div>
           {icon ? <div className="shrink-0 text-gray-400">{icon}</div> : null}

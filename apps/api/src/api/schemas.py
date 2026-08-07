@@ -66,6 +66,8 @@ class KpiOut(BaseModel):
     total_area_m2: float
     last_updated: datetime | None = None
     last_commit_id: str | None = None
+    # Speckle model / branch display name (from SPECKLE_BRANCH_NAME).
+    model_name: str | None = None
 
 
 class SnapshotOut(BaseModel):

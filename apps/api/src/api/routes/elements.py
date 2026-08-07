@@ -1,4 +1,4 @@
-"""REST routes: BIM elements list, detail, categories, and levels."""
+"""REST routes: BIM elements list, detail, map, categories, and levels."""
 
 from __future__ import annotations
 
@@ -52,6 +52,18 @@ async def list_elements(
         skip=skip,
         limit=limit,
     )
+
+
+@router.get("/map", response_model=ApiDataResponse[dict[str, str]])
+async def get_element_map(session: SessionDep) -> ApiDataResponse[dict[str, str]]:
+    """Map Revit ``element_id`` (UniqueId) → Speckle ``applicationId``.
+
+    Values match keys today: we select in the viewer by ``applicationId``, which
+    is the stable UniqueId stored as ``bim_elements.element_id``.
+    """
+    repo = ElementRepository(session)
+    mapping = await repo.element_application_id_map()
+    return ApiDataResponse(data=mapping)
 
 
 @router.get("/categories", response_model=ApiDataResponse[list[CategoryCountOut]])
