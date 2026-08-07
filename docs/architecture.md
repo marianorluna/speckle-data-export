@@ -89,7 +89,7 @@ data-speckle/
 | Application | `apps/api/src/application/` | Casos de uso: IngestCommit, GetKpis, RunQcCheck, ChatQuery. Orquestan entidades via puertos (interfaces). |
 | Infrastructure | `apps/api/src/infrastructure/` | Adaptadores concretos: SQLAlchemy repos, Speckle GraphQL client, DeepSeek HTTP client, JWT utils. |
 | API (Interface Adapters) | `apps/api/src/api/` | Handlers HTTP (FastAPI routes) y WebSocket endpoints. Convierten DTOs ↔ entidades. |
-| Presentation | `apps/web/src/` | React + Vite. Componentes presentacionales + hooks. Consume API REST + WebSocket + Speckle Viewer. |
+| Presentation | `apps/web/src/` | React + Vite. Componentes presentacionales + hooks. Shell responsive: sidebar fijo en `lg+`, drawer hamburguesa en `<lg`. Consume API REST + WebSocket + Speckle Viewer. |
 
 ## Flujo Revit → API → Dashboard
 

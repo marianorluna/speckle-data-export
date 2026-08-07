@@ -10,3 +10,4 @@ alwaysApply: false
 - **Lógica extraída:** API, formularios y estado complejo → hooks, composables o módulos (según el framework).
 - **Estado:** Lo más local posible. Store/contexto global solo para sesión o datos verdaderamente compartidos entre vistas.
 - **HTTP:** Un cliente/servicio base centralizado (instancia del HTTP client del proyecto o wrapper nativo) con auth headers y config común.
+- **Responsive:** El shell (`AppLayout`) debe funcionar en desktop, tablet y móvil. Desktop (`lg+`): sidebar fijo. `<lg`: menú hamburguesa + drawer overlay (cerrar con backdrop, Escape, X y al navegar). Sin scroll horizontal; grids fluidos (`sm` / `lg` / `xl`).

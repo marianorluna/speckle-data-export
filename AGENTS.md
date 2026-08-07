@@ -55,8 +55,8 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
 
 ## 4. Estado actual
 
-- **Última sesión:** 2026-08-07 — Prompt 07 cerrado: spool+relay live (`source=revit_ws`); botón ON/OFF con icono + `engine.persistent`; docs/ADR-010 alineados.
-- **Foco actual:** prompts 08–10 (frontend).
+- **Última sesión:** 2026-08-07 — Prompt 08: shell frontend + responsive (sidebar `lg+` / drawer hamburguesa `<lg`), hooks WS/Query, `lucide-react`.
+- **Foco actual:** prompts 09–10 (KPIs/gráficos + viewer 3D).
 - **Checklist:**
   - [x] Definir stack completo en AGENTS.md §2
   - [x] Rellenar contexto de negocio en AGENTS.md §3
@@ -73,6 +73,7 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
   - [x] Documentar arquitectura final prompt 07 (`architecture.md`, ADR-010, onboarding, prompt 07)
   - [x] Registrar ADRs 002-009 en docs/decisions.md
   - [x] ADR-010 — spool JSONL + relay CPython (sin red dentro de Revit)
+  - [x] Ejecutar prompt 08 (shell frontend: layout, UI base, WS + Query hooks)
   - [ ] Actualizar docs/onboarding.md con resto de comandos reales (Windows activate, etc.)
   - [x] Actualizar .env.example con variables del proyecto (hash via `bcrypt` nativo; Speckle PAT/project id; `REVIT_API_KEY`)
   - [ ] Actualizar README.md con descripción del producto
@@ -80,7 +81,8 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
   - [x] Crear prompts 01-03 (fase 1: fundación) — ejecutados
   - [x] Crear prompts 04-06 (fase 2: backend core) — ejecutados
   - [x] Crear prompt 07 (fase 3: pyRevit push) — cerrado e2e
-  - [ ] Crear prompts 08-10 (fase 4: frontend)
+  - [x] Crear/ejecutar prompt 08 (fase 4 frontend init)
+  - [ ] Crear/ejecutar prompts 09-10 (KPIs + viewer)
   - [ ] Crear prompt 11 (fase 5: IA)
   - [ ] Crear prompt 12 (fase 6: deploy)
 - **Bloqueadores:** Ninguno. Deuda: relay sin `pong` al heartbeat (cierre ~4000 y reconnect, ruidoso pero ok); `parameters` no planos; Materials/IDs duplicados; QC sin motor de reglas; live `commit_processed` tras ingest admin.
