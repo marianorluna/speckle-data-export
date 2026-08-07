@@ -1,4 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { WS_DASHBOARD_PATH } from "../lib/constants";
 
@@ -9,13 +19,21 @@ export type WSMessage = {
 
 type MessageListener = (data: WSMessage) => void;
 
+type WebSocketContextValue = {
+  connected: boolean;
+  lastMessage: WSMessage | null;
+  subscribe: (type: string, callback: MessageListener) => () => void;
+};
+
+const WebSocketContext = createContext<WebSocketContextValue | null>(null);
+
 const RECONNECT_MS = 3_000;
 
 /**
- * Dashboard WebSocket with auto-reconnect and typed pub/sub.
- * Connects via Vite proxy in dev (`/ws` → backend).
+ * Shared dashboard WebSocket (auto-reconnect + typed pub/sub).
+ * Mount once under AppLayout so Header and pages share one connection.
  */
-export function useWebSocket() {
+export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [connected, setConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<WSMessage | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -94,5 +112,18 @@ export function useWebSocket() {
     };
   }, [connect]);
 
-  return { connected, lastMessage, subscribe };
+  const value = useMemo(
+    () => ({ connected, lastMessage, subscribe }),
+    [connected, lastMessage, subscribe],
+  );
+
+  return createElement(WebSocketContext.Provider, { value }, children);
+}
+
+export function useWebSocket(): WebSocketContextValue {
+  const ctx = useContext(WebSocketContext);
+  if (!ctx) {
+    throw new Error("useWebSocket must be used within WebSocketProvider");
+  }
+  return ctx;
 }

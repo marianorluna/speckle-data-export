@@ -1,7 +1,8 @@
-import { LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, Radio, X } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 import { useAuth } from "../../hooks/useAuth";
+import { useWebSocket } from "../../hooks/useWebSocket";
 import { APP_NAME } from "../../lib/constants";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -22,6 +23,7 @@ export function Header({
   menuControlsId,
 }: HeaderProps) {
   const { user, logout, isLoadingUser } = useAuth();
+  const { connected } = useWebSocket();
   const { pathname } = useLocation();
   const title = PAGE_TITLES[pathname] ?? APP_NAME;
 
@@ -46,6 +48,24 @@ export function Header({
       </div>
 
       <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs sm:text-sm ${
+            connected
+              ? "bg-emerald-50 text-emerald-700"
+              : "bg-amber-50 text-amber-700"
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          <span
+            className={`h-2 w-2 shrink-0 rounded-full ${
+              connected ? "bg-emerald-500" : "bg-amber-400"
+            }`}
+            aria-hidden
+          />
+          <Radio className="hidden h-3.5 w-3.5 sm:inline" aria-hidden />
+          {connected ? "Conectado" : "Conectando…"}
+        </span>
         <span className="hidden max-w-[12rem] truncate text-sm text-gray-500 sm:inline md:max-w-xs">
           {isLoadingUser
             ? "Cargando…"

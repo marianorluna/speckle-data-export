@@ -1,103 +1,69 @@
-import { Boxes, Database, Radio, ShieldAlert } from "lucide-react";
+import { CategoryChart } from "../components/dashboard/CategoryChart";
+import { ElementTable } from "../components/dashboard/ElementTable";
+import { KpiCards } from "../components/dashboard/KpiCards";
+import { LevelChart } from "../components/dashboard/LevelChart";
+import { Tabs, type DashboardTab } from "../components/ui/Tabs";
+import { useDashboardRealtime } from "../hooks/useDashboardRealtime";
 
-import { Card } from "../components/ui/Card";
-import { ErrorMessage } from "../components/ui/ErrorMessage";
-import { LoadingSpinner } from "../components/ui/LoadingSpinner";
-import { useElements } from "../hooks/useElements";
-import { useKpis } from "../hooks/useKpis";
-import { useWebSocket } from "../hooks/useWebSocket";
+function OverviewPanel() {
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto lg:overflow-hidden">
+      <div className="shrink-0">
+        <KpiCards />
+      </div>
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-2 lg:overflow-hidden">
+        <div className="min-h-[280px] lg:h-full lg:min-h-0 lg:overflow-hidden">
+          <CategoryChart />
+        </div>
+        <div className="min-h-[280px] lg:h-full lg:min-h-0 lg:overflow-hidden">
+          <LevelChart />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ElementsPanel() {
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <ElementTable />
+    </div>
+  );
+}
+
+const DASHBOARD_TABS: DashboardTab[] = [
+  {
+    id: "overview",
+    label: "Resumen",
+    panel: <OverviewPanel />,
+  },
+  {
+    id: "elements",
+    label: "Elementos",
+    panel: <ElementsPanel />,
+  },
+];
 
 export function DashboardPage() {
-  const { connected, lastMessage } = useWebSocket();
-  const kpisQuery = useKpis();
-  const elementsQuery = useElements({ limit: 5 });
-
-  if (kpisQuery.isLoading) {
-    return <LoadingSpinner label="Cargando KPIs…" />;
-  }
-
-  if (kpisQuery.isError) {
-    return (
-      <ErrorMessage
-        message={
-          kpisQuery.error instanceof Error
-            ? kpisQuery.error.message
-            : "No se pudieron cargar los KPIs"
-        }
-        onRetry={() => void kpisQuery.refetch()}
-      />
-    );
-  }
-
-  const kpis = kpisQuery.data;
+  const { connected } = useDashboardRealtime();
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 ${
-            connected
-              ? "bg-emerald-50 text-emerald-700"
-              : "bg-amber-50 text-amber-700"
-          }`}
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      {!connected ? (
+        <div
+          className="shrink-0 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800"
+          role="status"
         >
-          <Radio className="h-3.5 w-3.5" aria-hidden />
-          WS {connected ? "conectado" : "desconectado"}
-        </span>
-        {lastMessage?.type ? (
-          <span className="max-w-full truncate text-gray-400">
-            Último evento: {String(lastMessage.type)}
-          </span>
-        ) : null}
-      </div>
+          Sin conexión en tiempo real. Los datos pueden estar desactualizados.
+        </div>
+      ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card
-          title="Elementos"
-          value={kpis?.total_elements ?? "—"}
-          subtitle={
-            elementsQuery.isSuccess
-              ? `Muestra API: ${elementsQuery.data.total} total`
-              : elementsQuery.isLoading
-                ? "Fetch elementos…"
-                : elementsQuery.isError
-                  ? "Error al listar elementos"
-                  : undefined
-          }
-          icon={<Boxes className="h-6 w-6" />}
-        />
-        <Card
-          title="Sin fire rating"
-          value={kpis?.missing_fire_rating ?? "—"}
-          icon={<ShieldAlert className="h-6 w-6" />}
-        />
-        <Card
-          title="Volumen (m³)"
-          value={
-            kpis
-              ? kpis.total_volume_m3.toLocaleString(undefined, {
-                  maximumFractionDigits: 1,
-                })
-              : "—"
-          }
-          icon={<Database className="h-6 w-6" />}
-        />
-        <Card
-          title="Área (m²)"
-          value={
-            kpis
-              ? kpis.total_area_m2.toLocaleString(undefined, {
-                  maximumFractionDigits: 1,
-                })
-              : "—"
-          }
-        />
-      </div>
-
-      <p className="text-sm text-gray-500">
-        Shell del dashboard lista. Gráficos y tabla completa llegan en el prompt
-        09.
-      </p>
+      <Tabs
+        tabs={DASHBOARD_TABS}
+        defaultTabId="overview"
+        className="min-h-0 flex-1"
+        panelClassName="pt-3"
+      />
     </div>
   );
 }
