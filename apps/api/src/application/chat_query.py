@@ -23,34 +23,83 @@ Tabla: bim_elements
 Columnas:
 - id (INTEGER PRIMARY KEY)
 - element_id (TEXT UNIQUE) — UniqueId de Revit
-- category (TEXT) — Walls, Doors, Floors, Windows, etc.
+- category (TEXT) — categoria del elemento. Valores exactos en este modelo:
+    'Structural Framing', 'Generic Models', 'Structural Foundations',
+    'Structural Beam Systems', 'Structural Columns', 'Walls', 'Floors',
+    'Structural Rebar', 'Shaft Openings'
+  Nota: NO existen categorias llamadas 'Doors', 'Windows', 'Foundations', 'Columns'.
+  Para fundaciones usa category='Structural Foundations'.
+  Para columnas usa category='Structural Columns'.
 - family (TEXT, nullable) — Familia de Revit
-- type_name (TEXT, nullable) — Tipo del elemento
-- level (TEXT, nullable) — Nivel del edificio (Level 1, Level 2...)
-- parameters (TEXT) — JSON con parametros del elemento
-- volume (REAL, nullable) — Volumen en metros cubicos
-- area (REAL, nullable) — Area en metros cuadrados
-- length (REAL, nullable) — Longitud en metros
+- type_name (TEXT, nullable) — Tipo del elemento (ej. 'Concrete 10"', '24x24x20''')
+- level (TEXT, nullable) — Nivel del edificio
+- parameters (TEXT) — JSON con todos los parametros del elemento
+- volume (REAL, nullable) — Volumen en metros cubicos (ya poblado desde parameters)
+- area (REAL, nullable) — Area en metros cuadrados (ya poblado desde parameters)
+- length (REAL, nullable) — Longitud en metros (ya poblado desde parameters)
 - source (TEXT) — 'speckle' o 'revit_ws'
-- commit_id (TEXT, nullable) — ID del commit de Speckle
-- created_at (TEXT)
-- updated_at (TEXT)
+- created_at (TEXT), updated_at (TEXT)
+
+Parametros importantes dentro del JSON 'parameters':
+- Material del elemento: json_extract(parameters,'$.Structural Material')
+  o json_extract(parameters,'$.material') — ej. 'Concrete, Cast-in-Place gray'
+- Fire Rating: json_extract(parameters,'$.Fire Rating')
+- Unconnected Height: json_extract(parameters,'$.Unconnected Height')
+- Para otros parametros usa json_extract(parameters,'$.<Nombre exacto del parametro>')
+
+REGLA CRITICA PARA EL BOTON DE SELECCION EN EL VISOR:
+Cuando el usuario pregunta "cuantos X hay", "dame los X", "cuales son los X" o cualquier
+filtrado de elementos → SIEMPRE incluye element_id en el SELECT (no uses solo COUNT(*)).
+El recuento total se calcula automaticamente con las filas devueltas.
+Usa COUNT(*) solo para sub-totales dentro de GROUP BY o cuando se mezcla con otros
+agregados (SUM, AVG) sin posibilidad de incluir element_id.
 
 Ejemplos de consultas:
-- Muros del modelo:
-  SELECT element_id, category, level, family, type_name, volume
+
+- Cuantos muros hay (con boton visor):
+  SELECT element_id, category, level, type_name, volume
   FROM bim_elements WHERE category='Walls'
 
+- Muros de concreto con volumen:
+  SELECT element_id, type_name, level, volume
+  FROM bim_elements
+  WHERE category='Walls'
+    AND (
+      lower(COALESCE(json_extract(parameters,'$.Structural Material'),'')) LIKE '%concrete%'
+      OR lower(COALESCE(json_extract(parameters,'$.material'),'')) LIKE '%concrete%'
+      OR lower(COALESCE(type_name,'')) LIKE '%concrete%'
+    )
+    AND volume IS NOT NULL
+
+- Volumen total de muros de concreto (agregado puro):
+  SELECT
+    COUNT(*) as n_elementos,
+    SUM(volume) as total_volume_m3,
+    json_extract(parameters,'$.Structural Material') as material
+  FROM bim_elements
+  WHERE category='Walls'
+    AND lower(COALESCE(json_extract(parameters,'$.Structural Material'),'')) LIKE '%concrete%'
+  GROUP BY json_extract(parameters,'$.Structural Material')
+
+- Cuantos tipos de fundaciones hay (agregado):
+  SELECT type_name, COUNT(*) as n
+  FROM bim_elements WHERE category='Structural Foundations'
+  GROUP BY type_name ORDER BY n DESC
+
+- Columnas por nivel (con element_id):
+  SELECT element_id, level, family, type_name
+  FROM bim_elements WHERE category='Structural Columns'
+  ORDER BY level
+
 - Elementos sin nivel:
-  SELECT element_id, category FROM bim_elements WHERE level IS NULL OR level=''
+  SELECT element_id, category FROM bim_elements
+  WHERE level IS NULL OR level=''
 
-- Volumen total por categoria:
-  SELECT category, SUM(volume) as total_volume, COUNT(*) as n
-  FROM bim_elements GROUP BY category ORDER BY total_volume DESC
-
-- Structural Framing por nivel:
-  SELECT level, COUNT(*) as n FROM bim_elements
-  WHERE category='Structural Framing' GROUP BY level
+- Volumen total por categoria (agregado puro):
+  SELECT category, COUNT(*) as n, SUM(volume) as total_volume_m3
+  FROM bim_elements
+  WHERE volume IS NOT NULL
+  GROUP BY category ORDER BY total_volume_m3 DESC
 """
 
 
@@ -146,11 +195,14 @@ class ChatQuery:
 
         summary = await self._model_summary()
         try:
-            answer = await self._llm.summarize_query_results(
+            query_summary = await self._llm.summarize_query_results(
                 question=question,
                 rows_preview=json.dumps(capped[:10], default=str),
                 model_context=summary,
             )
+            answer = query_summary.answer
+            if not query_summary.highlight_elements:
+                capped_ids = []
         except LLMError:
             answer = (
                 f"Consulta ejecutada: {len(results)} resultado(s). "

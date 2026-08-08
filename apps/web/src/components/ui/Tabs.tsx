@@ -9,6 +9,8 @@ import {
 export type DashboardTab = {
   id: string;
   label: string;
+  /** Compact label below ``lg`` (e.g. «3D» instead of «Visor 3D»). */
+  shortLabel?: string;
   panel: ReactNode;
 };
 
@@ -135,18 +137,26 @@ export function Tabs({
                 id={`${baseId}-tab-${tab.id}`}
                 type="button"
                 role="tab"
+                aria-label={tab.label}
                 aria-selected={selected}
                 aria-controls={`${baseId}-panel-${tab.id}`}
                 tabIndex={selected ? 0 : -1}
                 onClick={() => selectTab(tab.id)}
                 onKeyDown={(event) => onTabKeyDown(event, index)}
-                className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors sm:px-4 ${
+                className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors sm:px-4 ${
                   selected
                     ? "border-gray-900 text-gray-900"
                     : "border-transparent text-gray-500 hover:text-gray-800"
                 }`}
               >
-                {tab.label}
+                {tab.shortLabel ? (
+                  <>
+                    <span className="lg:hidden">{tab.shortLabel}</span>
+                    <span className="hidden lg:inline">{tab.label}</span>
+                  </>
+                ) : (
+                  tab.label
+                )}
               </button>
             );
           })}

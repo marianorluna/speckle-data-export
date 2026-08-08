@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from math import ceil
 
 from fastapi import APIRouter, HTTPException, Request, status
 
-from src.api.deps import CurrentUser, SessionDep, SettingsDep
+from src.api.deps import CurrentUser, SessionDep, SettingsDep, Settings
 from src.api.schemas import ApiDataResponse, ChatRequest, ChatResultOut
 from src.application.chat_abuse_guard import chat_abuse_guard
 from src.application.chat_query import ChatQuery
@@ -38,9 +39,44 @@ def _client_ip(request: Request) -> str:
     return "unknown"
 
 
+def _quota_key_and_limit(
+    user: User, request: Request, settings: Settings
+) -> tuple[str, int] | None:
+    """Return (rate-limit key, daily limit) for guest roles; None if exempt."""
+    if user.role == "guest":
+        return f"ip:{_client_ip(request)}", max(1, settings.chat_guest_daily_limit)
+    if user.role == "guest_extended":
+        uid = user.id if user.id is not None else user.email
+        return f"user:{uid}", max(1, settings.chat_guest_extended_daily_limit)
+    return None
+
+
 def _format_blocked_until(blocked_until: datetime) -> str:
     local = blocked_until.astimezone() if blocked_until.tzinfo else blocked_until
     return local.strftime("%H:%M")
+
+
+def _format_wait_relative(
+    blocked_until: datetime, *, now: datetime | None = None
+) -> str:
+    """Human-friendly wait label: ~1 hora / ~N horas / ~1 día."""
+    instant = now if now is not None else datetime.now(UTC)
+    if instant.tzinfo is None:
+        instant = instant.replace(tzinfo=UTC)
+    until = blocked_until
+    if until.tzinfo is None:
+        until = until.replace(tzinfo=UTC)
+    delta = until - instant
+    if delta <= timedelta(0):
+        return "aproximadamente 1 hora"
+    total_minutes = delta.total_seconds() / 60
+    if total_minutes < 90:
+        return "aproximadamente 1 hora"
+    total_hours = total_minutes / 60
+    if total_hours < 20:
+        hours = max(2, ceil(total_hours))
+        return f"aproximadamente {hours} horas"
+    return "aproximadamente 1 día"
 
 
 def _abuse_blocked_answer(blocked_until: datetime, *, just_blocked: bool) -> str:
@@ -57,11 +93,12 @@ def _abuse_blocked_answer(blocked_until: datetime, *, just_blocked: bool) -> str
 
 
 def _quota_blocked_answer(*, limit: int, blocked_until: datetime) -> str:
-    until_local = blocked_until.astimezone() if blocked_until.tzinfo else blocked_until
-    until_label = until_local.strftime("%d/%m %H:%M")
+    wait = _format_wait_relative(blocked_until)
     return (
         f"Has usado las {limit} preguntas de hoy (cuota de invitado). "
-        f"Podrás volver a preguntar a partir de las {until_label} (hora local)."
+        f"Debes esperar {wait}. "
+        "Si quieres consultar más veces, comunícate con el administrador "
+        "para obtener un usuario con más intentos."
     )
 
 
@@ -76,8 +113,10 @@ async def chat(
     """
     Ask a natural-language question about the ingested BIM model.
 
-    Requires JWT (admin or guest). Guests are limited to
-    ``CHAT_GUEST_DAILY_LIMIT`` questions per IP per UTC day.
+    Requires JWT (admin, guest, or guest_extended). Guests are limited to
+    ``CHAT_GUEST_DAILY_LIMIT`` billable questions per IP per UTC day;
+    ``guest_extended`` uses ``CHAT_GUEST_EXTENDED_DAILY_LIMIT`` per user id.
+    A question is billable only when it returns ``element_ids`` (viewer select).
     Off-topic questions are refused; repeated abuse blocks the chat for one hour.
     """
     if not settings.openrouter_api_key.strip():
@@ -99,12 +138,10 @@ async def chat(
             )
         )
 
-    apply_guest_quota = current_user.role == "guest"
-    client_ip = _client_ip(request) if apply_guest_quota else ""
-    if apply_guest_quota:
-        limit = max(1, settings.chat_guest_daily_limit)
-        chat_rate_limiter.set_daily_limit(limit)
-        quota = chat_rate_limiter.check(client_ip)
+    quota_ctx = _quota_key_and_limit(current_user, request, settings)
+    if quota_ctx is not None:
+        quota_key, limit = quota_ctx
+        quota = chat_rate_limiter.check(quota_key, limit=limit)
         if quota.blocked and quota.blocked_until is not None:
             return ApiDataResponse(
                 data=ChatResultOut(
@@ -119,9 +156,6 @@ async def chat(
                 )
             )
 
-    if apply_guest_quota:
-        chat_rate_limiter.record(client_ip)
-
     element_repo = ElementRepository(session)
     async with LLMClient(
         api_key=settings.openrouter_api_key,
@@ -129,6 +163,14 @@ async def chat(
         model=settings.openrouter_model,
     ) as llm:
         result = await ChatQuery(llm, element_repo).execute(body.question)
+
+    if (
+        quota_ctx is not None
+        and result.get("type") == "query"
+        and result.get("element_ids")
+    ):
+        quota_key, limit = quota_ctx
+        chat_rate_limiter.record(quota_key, limit=limit)
 
     if result["type"] == "query":
         chat_abuse_guard.record_success(key)

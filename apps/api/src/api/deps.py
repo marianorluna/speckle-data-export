@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     admin_password_hash: str = ""
     guest_email: str = ""
     guest_password_hash: str = ""
+    guest_extended_email: str = ""
+    guest_extended_password_hash: str = ""
     speckle_token: str = ""
     # Read-oriented token exposed to the frontend via viewer-config (falls back to SPECKLE_TOKEN).
     speckle_viewer_token: str = ""
@@ -51,6 +53,7 @@ class Settings(BaseSettings):
     openrouter_model: str = "deepseek/deepseek-chat"
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     chat_guest_daily_limit: int = 3
+    chat_guest_extended_daily_limit: int = 50
 
     @property
     def cors_origin_list(self) -> list[str]:

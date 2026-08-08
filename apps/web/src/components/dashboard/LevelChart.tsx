@@ -87,7 +87,10 @@ function LevelLegend({
   onSelectLevel?: (level: string | null) => void;
 }) {
   return (
-    <ul className="flex shrink-0 flex-wrap justify-center gap-x-3 gap-y-1 px-1 pt-1 text-xs text-gray-700">
+    <ul
+      className="flex shrink-0 gap-x-3 gap-y-1 px-1 pt-1 text-xs text-gray-700 max-lg:flex-nowrap max-lg:justify-start max-lg:overflow-x-auto max-lg:[scrollbar-width:none] max-lg:[-ms-overflow-style:none] max-lg:[&::-webkit-scrollbar]:hidden lg:flex-wrap lg:justify-center"
+      aria-label="Leyenda de niveles"
+    >
       {items.map((item) => {
         const isActive =
           hasLevelFilter === true &&
@@ -95,10 +98,10 @@ function LevelLegend({
             item.level === activeLevel);
         const dimmed = hasLevelFilter && !isActive;
         return (
-          <li key={item.name}>
+          <li key={item.name} className="shrink-0">
             <button
               type="button"
-              className={`inline-flex items-center gap-1.5 rounded-sm ${
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-sm ${
                 onSelectLevel ? "cursor-pointer hover:underline" : ""
               } ${dimmed ? "opacity-40" : ""}`}
               onClick={() => onSelectLevel?.(item.level)}
@@ -178,7 +181,7 @@ export function LevelChart({
           Sin datos de niveles
         </p>
       ) : (
-        <div className="flex h-[200px] w-full min-w-0 min-h-0 flex-1 flex-col lg:h-auto">
+        <div className="flex h-[260px] w-full min-w-0 min-h-0 flex-1 flex-col lg:h-auto">
           <div className="min-h-0 w-full flex-1">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
@@ -188,7 +191,7 @@ export function LevelChart({
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  outerRadius="80%"
+                  outerRadius="85%"
                   shape={(props: PieSectorShapeProps) => (
                     <ColoredPieSector
                       {...props}

@@ -81,7 +81,7 @@ class QcFindingModel(Base):
 
 
 class UserModel(Base):
-    """Application user row for JWT authentication (admin | guest)."""
+    """Application user row for JWT authentication (admin | guest | guest_extended)."""
 
     __tablename__ = "users"
 

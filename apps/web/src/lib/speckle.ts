@@ -28,6 +28,27 @@ let sectionTool: SectionTool | null = null;
 /** Speckle defaults to SmoothOrbitControls ("free orbit"). */
 let freeOrbitActive = true;
 
+/**
+ * Monotonic guard against overlapping ``initViewer`` calls.
+ *
+ * React StrictMode double-invokes mount effects in dev (mount → cleanup →
+ * mount again) *before* the first async ``initViewer`` call resolves. Without
+ * this guard both calls race to reassign the module singletons above, and
+ * each variable is overwritten independently whenever *its own* call reaches
+ * that line — so ``viewerInstance`` can end up pointing at a different
+ * ``Viewer`` than ``cameraController`` / ``selectionExtension`` /
+ * ``filteringExtension``. Symptom: ``applySelectionByApplicationIds`` reports
+ * ``matchedNodes > 0`` (computed from the correct, visible ``viewerInstance``
+ * world tree) yet nothing highlights, selects, or zooms (because the camera
+ * / selection / filtering extensions belong to a stale, orphaned Viewer
+ * whose canvas is never shown). Only the call matching the latest generation
+ * may commit its Viewer/extensions atomically; superseded calls tear down
+ * their own orphan instead of touching shared state.
+ */
+let initGeneration = 0;
+
+class StaleViewerInit extends Error {}
+
 export type ViewerInitOptions = {
   container: HTMLElement;
   serverUrl: string;
@@ -160,6 +181,16 @@ function findNodeIdsByApplicationIds(applicationIds: string[]): string[] {
   return [...ids];
 }
 
+/**
+ * ``Viewer.dispose()`` is a documented no-op in @speckle/viewer 2.x (it does
+ * not detach the canvas or release the WebGL context), so orphaned instances
+ * must have their canvas removed from the DOM manually.
+ */
+function discardOrphanViewer(orphan: Viewer): void {
+  orphan.getCanvas().remove();
+  orphan.dispose();
+}
+
 export async function initViewer(options: ViewerInitOptions): Promise<Viewer> {
   const { container, serverUrl, streamId, commitId, authToken = "" } = options;
 
@@ -167,38 +198,57 @@ export async function initViewer(options: ViewerInitOptions): Promise<Viewer> {
     throw new Error("Speckle stream_id is empty — configure SPECKLE_STREAM_ID");
   }
 
-  if (viewerInstance) {
-    disposeViewer();
-  }
-
+  const generation = ++initGeneration;
   freeOrbitActive = true;
 
   const params = { ...DefaultViewerParams, showStats: false, verbose: false };
   const viewer = new Viewer(container, params);
-  await viewer.init();
 
-  cameraController = viewer.createExtension(CameraController);
-  selectionExtension = viewer.createExtension(SelectionExtension);
-  filteringExtension = viewer.createExtension(FilteringExtension);
-  sectionTool = viewer.createExtension(SectionTool);
+  /** Abort if a newer ``initViewer`` call has since started. */
+  const assertCurrent = (): void => {
+    if (generation !== initGeneration) {
+      discardOrphanViewer(viewer);
+      throw new StaleViewerInit();
+    }
+  };
+
+  await viewer.init();
+  assertCurrent();
+
+  const nextCameraController = viewer.createExtension(CameraController);
+  const nextSelectionExtension = viewer.createExtension(SelectionExtension);
+  const nextFilteringExtension = viewer.createExtension(FilteringExtension);
+  const nextSectionTool = viewer.createExtension(SectionTool);
   viewer.createExtension(SectionOutlines);
-  measurementsExtension = viewer.createExtension(MeasurementsExtension);
-  measurementsExtension.enabled = false;
-  sectionTool.enabled = false;
+  const nextMeasurementsExtension = viewer.createExtension(MeasurementsExtension);
+  nextMeasurementsExtension.enabled = false;
+  nextSectionTool.enabled = false;
 
   const resourceUrl = buildResourceUrl(serverUrl, streamId, commitId);
   const urls = await UrlHelper.getResourceUrls(resourceUrl, authToken || undefined);
+  assertCurrent();
   if (urls.length === 0) {
-    disposeViewer();
+    discardOrphanViewer(viewer);
     throw new Error(`No Speckle resources for ${resourceUrl}`);
   }
 
   for (const url of urls) {
     const loader = new SpeckleLoader(viewer.getWorldTree(), url, authToken);
     await viewer.loadObject(loader, true);
+    assertCurrent();
   }
 
+  // No newer call started while this one was loading — commit atomically.
+  if (viewerInstance && viewerInstance !== viewer) {
+    discardOrphanViewer(viewerInstance);
+  }
   viewerInstance = viewer;
+  cameraController = nextCameraController;
+  selectionExtension = nextSelectionExtension;
+  filteringExtension = nextFilteringExtension;
+  measurementsExtension = nextMeasurementsExtension;
+  sectionTool = nextSectionTool;
+
   return viewer;
 }
 
@@ -492,7 +542,12 @@ export function onObjectClicked(
 }
 
 export function disposeViewer(): void {
-  viewerInstance?.dispose();
+  // Invalidate any in-flight `initViewer` call so it discards its own Viewer
+  // instead of racing to reassign the singletons below once it resolves.
+  initGeneration += 1;
+  if (viewerInstance) {
+    discardOrphanViewer(viewerInstance);
+  }
   viewerInstance = null;
   cameraController = null;
   selectionExtension = null;

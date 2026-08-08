@@ -40,7 +40,7 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
   - Cada elemento BIM tiene una categoría, un nivel y un conjunto de parámetros (algunos obligatorios como `fire_rating` en puertas).
   - Un snapshot de datos se genera en cada envío (Speckle Send) y en cada cambio detectado por pyRevit (DocumentChanged). El dashboard refleja el último estado conocido.
   - El visor 3D se actualiza por commit de Speckle; los KPIs y métricas tabulares se actualizan por WebSocket en tiempo real.
-  - El usuario admin es el único con acceso de escritura (login JWT). Existe un rol `guest` para demos (lectura + chat con cuota). Las URLs de solo lectura sin auth pueden ampliarse en el futuro.
+  - El usuario admin es el único con acceso de escritura (login JWT). Existe un rol `guest` para demos (lectura + chat con cuota 3 billables/día/IP) y `guest_extended` (misma lectura; 50 billables/día por user id). Las URLs de solo lectura sin auth pueden ampliarse en el futuro.
 - **Integraciones externas:**
   - Speckle Cloud (GraphQL API para historial de commits y datos geométricos)
   - DeepSeek API via OpenRouter (chat NL para consultas sobre el modelo)
@@ -55,7 +55,7 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
 
 ## 4. Estado actual
 
-- **Última sesión:** 2026-08-08 — Demo readiness: roles admin/guest, cuota chat 3/día/IP, viewer token separado, README + prompt 12.
+- **Última sesión:** 2026-08-08 — Cuota chat billable (solo con element_ids), mensaje relativo + contacto admin, rol `guest_extended` (50/día/user).
 - **Foco actual:** ejecutar prompt 12 (Docker/Coolify) + gate e2e chat con `OPENROUTER_API_KEY`.
 - **Checklist:**
  - [x] Definir stack completo en AGENTS.md §2
@@ -88,10 +88,11 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
  - [x] Chat como widget flotante en Dashboard (FAB; sin ítem IA Chat en sidebar)
 - [x] Dashboard 3 pestañas: Resumen + Elementos (tabla) + Visor 3D; chat «Ver en visor»
  - [x] Demo readiness: roles admin/guest, cuota chat guest, `SPECKLE_VIEWER_TOKEN`, ADR-011
+ - [x] Cuota chat: cobro solo con `element_ids`; mensaje relativo; `guest_extended` 50/día
  - [x] Crear prompt 12 (fase 6: deploy)
  - [ ] Gate e2e prompt 11: `OPENROUTER_API_KEY` + pregunta real + highlight dashboard
  - [ ] Ejecutar prompt 12 (Docker/Coolify + URL pública)
-- **Bloqueadores:** Gate e2e chat pendiente de `OPENROUTER_API_KEY` (reiniciar uvicorn tras editar `.env`). Deploy pendiente (prompt 12). Deuda previa: relay sin `pong` al heartbeat; `parameters` no planos; Materials/IDs duplicados; QC sin motor de reglas; live `commit_processed` tras ingest admin; filtro UI «Sin nivel» no soportado; mapa `element_id`→`applicationId` es identidad. SQLite Snowdon (`structure/snowdon-towers-r27`, 1390 elems; sin Doors — sugerencias chat usan Walls/Framing). Chat: FAB global; guest 3 preguntas/día/IP; `/chat` redirige a `/dashboard`. Credenciales demo públicas: `invitado@marianorluna.com` / `abc123` (solo guest).
+- **Bloqueadores:** Gate e2e chat pendiente de `OPENROUTER_API_KEY` (reiniciar uvicorn tras editar `.env`). Deploy pendiente (prompt 12). Deuda previa: relay sin `pong` al heartbeat; `parameters` no planos; Materials/IDs duplicados; QC sin motor de reglas; live `commit_processed` tras ingest admin; filtro UI «Sin nivel» no soportado; mapa `element_id`→`applicationId` es identidad. SQLite Snowdon (`structure/snowdon-towers-r27`, 1390 elems; sin Doors — sugerencias chat usan Walls/Framing). Chat: FAB global; guest 3 billables/día/IP; `guest_extended` 50 billables/día/user (no publicar credenciales); `/chat` redirige a `/dashboard`. Credenciales demo públicas: `invitado@marianorluna.com` / `abc123` (solo guest).
 
 ### Protocolo de cierre de sesión
 

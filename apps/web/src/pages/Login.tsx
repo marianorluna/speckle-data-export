@@ -8,7 +8,7 @@ const DEMO_PASSWORD = "abc123";
 
 export function LoginPage() {
   const { login, isAuthenticated, isLoggingIn, loginError } = useAuth();
-  const [email, setEmail] = useState(DEMO_EMAIL);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   if (isAuthenticated) {
@@ -52,7 +52,7 @@ export function LoginPage() {
           <button
             type="button"
             onClick={fillDemo}
-            className="mt-2 text-slate-800 underline underline-offset-2 hover:text-slate-950"
+            className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-100"
           >
             Rellenar invitado
           </button>
@@ -65,8 +65,9 @@ export function LoginPage() {
             autoComplete="username"
             required
             value={email}
+            placeholder="tu@email.com"
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-500"
+            className="w-full border border-slate-300 px-3 py-2 text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-500"
           />
         </label>
 
@@ -77,8 +78,9 @@ export function LoginPage() {
             autoComplete="current-password"
             required
             value={password}
+            placeholder="••••••••"
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-500"
+            className="w-full border border-slate-300 px-3 py-2 text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-500"
           />
         </label>
 

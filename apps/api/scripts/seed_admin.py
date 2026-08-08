@@ -1,4 +1,4 @@
-"""Seed admin + guest users from env (upsert by email).
+"""Seed admin + guest + guest_extended users from env (upsert by email).
 
 Usage (from apps/api with venv active)::
 
@@ -18,7 +18,7 @@ if str(_API_ROOT) not in sys.path:
 
 
 async def seed_users() -> dict[str, str]:
-    """Upsert admin (required) and guest (optional) from settings.
+    """Upsert admin (required), guest and guest_extended (optional) from settings.
 
     Returns a map of email → ``created`` | ``updated`` for rows touched.
     """
@@ -62,6 +62,23 @@ async def seed_users() -> dict[str, str]:
         elif guest_email or guest_hash:
             print(
                 "Guest seed skipped: set both GUEST_EMAIL and GUEST_PASSWORD_HASH"
+            )
+
+        extended_email = (settings.guest_extended_email or "").strip()
+        extended_hash = (settings.guest_extended_password_hash or "").strip()
+        if extended_email and extended_hash:
+            extended_action = await repo.upsert_by_email(
+                email=extended_email,
+                password_hash=extended_hash,
+                role="guest_extended",
+                is_active=True,
+            )
+            results[extended_email] = extended_action
+            print(f"Guest extended user {extended_action}: {extended_email}")
+        elif extended_email or extended_hash:
+            print(
+                "Guest extended seed skipped: set both "
+                "GUEST_EXTENDED_EMAIL and GUEST_EXTENDED_PASSWORD_HASH"
             )
 
         await session.commit()

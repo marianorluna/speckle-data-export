@@ -169,7 +169,7 @@ HTTP status codes: 400 (validacion), 401 (auth), 404 (no encontrado), 500 (inter
 Al cerrar una decision: `[x] → ADR-NNN` y registrar el ADR en [`docs/decisions.md`](./decisions.md).
 
 - [x] Contratos de API versionados: no — MVP sin versionado explicito.
-- [x] Auth: JWT admin/guest (ADR-005 + ADR-011); writes requieren `admin`.
+- [x] Auth: JWT admin/guest/guest_extended (ADR-005 + ADR-011); writes requieren `admin`.
 - [x] Limites de responsabilidad FE vs BE: API normaliza y sirve datos; frontend renderiza y conecta viewer. Sin logica de negocio en el frontend.
 
 Decisiones ya tomadas → [`docs/decisions.md`](./decisions.md).

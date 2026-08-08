@@ -1,6 +1,7 @@
-import { LayoutDashboard, X } from "lucide-react";
+import { LayoutDashboard, LogOut, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
+import { useAuth } from "../../hooks/useAuth";
 import { APP_NAME } from "../../lib/constants";
 
 const linkBase =
@@ -23,6 +24,10 @@ export function Sidebar({
   onClose,
   id,
 }: SidebarProps) {
+  const { user, logout, isLoadingUser } = useAuth();
+  const isGuest =
+    user?.role === "guest" || user?.role === "guest_extended";
+
   return (
     <aside
       id={id}
@@ -61,6 +66,34 @@ export function Sidebar({
           Dashboard
         </NavLink>
       </nav>
+
+      <div className="mt-auto border-t border-gray-800 p-3">
+        <div className="px-1">
+          {isLoadingUser ? (
+            <p className="text-xs text-gray-400">Cargando…</p>
+          ) : (
+            <>
+              <p
+                className="break-all text-xs leading-snug text-gray-300"
+                title={user?.email}
+              >
+                {user?.email ?? "Sesión activa"}
+              </p>
+              {isGuest ? (
+                <p className="mt-0.5 text-xs text-gray-500">Invitado</p>
+              ) : null}
+            </>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={logout}
+          className="mt-2 flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
+        >
+          <LogOut className="h-4 w-4 shrink-0" aria-hidden />
+          Cerrar sesión
+        </button>
+      </div>
     </aside>
   );
 }

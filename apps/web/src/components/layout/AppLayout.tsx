@@ -66,9 +66,9 @@ export function AppLayout() {
           <Sidebar />
         </div>
 
-        {/* Mobile / tablet: overlay drawer */}
+        {/* Mobile / tablet: overlay drawer (above chat FAB z-50 so it blocks interaction) */}
         <div
-          className={`fixed inset-0 z-40 lg:hidden ${
+          className={`fixed inset-0 z-[60] lg:hidden ${
             mobileNavOpen ? "pointer-events-auto" : "pointer-events-none"
           }`}
           aria-hidden={!mobileNavOpen}

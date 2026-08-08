@@ -19,7 +19,7 @@ Dashboard BIM con actualización en tiempo real para modelos de Revit. Visualiza
 - **Invitado (público a propósito):**
   - Email: `invitado@marianorluna.com`
   - Password: `abc123`
-- El invitado puede explorar el dashboard y hacer **hasta 3 preguntas de chat por día e IP**. El usuario admin no se publica.
+- El invitado puede explorar el dashboard y hacer **hasta 3 preguntas de chat con resultado en el visor por día e IP** (consultas sin elementos seleccionables no consumen cuota). El usuario admin no se publica.
 
 ## Stack
 

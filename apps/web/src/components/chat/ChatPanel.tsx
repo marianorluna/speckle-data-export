@@ -48,6 +48,26 @@ function formatBlockedUntil(iso: string | null): string | null {
   });
 }
 
+/** Human-friendly wait for quota reset (mirrors API `_format_wait_relative`). */
+function formatWaitRelative(iso: string | null): string | null {
+  if (!iso) {
+    return null;
+  }
+  const until = new Date(iso).getTime();
+  if (Number.isNaN(until)) {
+    return null;
+  }
+  const totalMinutes = (until - Date.now()) / 60_000;
+  if (totalMinutes <= 0 || totalMinutes < 90) {
+    return "aproximadamente 1 hora";
+  }
+  const totalHours = totalMinutes / 60;
+  if (totalHours < 20) {
+    return `aproximadamente ${Math.max(2, Math.ceil(totalHours))} horas`;
+  }
+  return "aproximadamente 1 día";
+}
+
 type BlockReason = "abuse" | "quota" | null;
 
 export function ChatPanel({
@@ -64,6 +84,7 @@ export function ChatPanel({
   const isBlocked =
     blockedUntil !== null && new Date(blockedUntil).getTime() > Date.now();
   const blockedLabel = formatBlockedUntil(blockedUntil);
+  const waitRelative = formatWaitRelative(blockedUntil);
   const inputDisabled = mutation.isPending || isBlocked;
 
   useEffect(() => {
@@ -160,18 +181,6 @@ export function ChatPanel({
         </div>
       ) : null}
 
-      {isBlocked ? (
-        <div className="shrink-0 border-b border-red-100 bg-red-50 px-4 py-2 text-xs text-red-800">
-          {blockReason === "quota"
-            ? `Has usado las preguntas de invitado de hoy${
-                blockedLabel ? ` · disponible de nuevo a las ${blockedLabel}` : ""
-              }.`
-            : `Chat bloqueado${
-                blockedLabel ? ` hasta las ${blockedLabel}` : ""
-              } por consultas fuera de tema.`}
-        </div>
-      ) : null}
-
       {messages.length === 0 && !isBlocked ? (
         <div className="shrink-0 space-y-2 border-b border-gray-100 px-4 py-3">
           <p className="text-xs font-medium text-gray-500">Sugerencias</p>
@@ -249,9 +258,13 @@ export function ChatPanel({
           onChange={(e) => setInput(e.target.value)}
           placeholder={
             isBlocked
-              ? blockedLabel
-                ? `Bloqueado hasta las ${blockedLabel}`
-                : "Chat bloqueado"
+              ? blockReason === "quota"
+                ? waitRelative
+                  ? `Espera ${waitRelative}`
+                  : "Cuota de invitado agotada"
+                : blockedLabel
+                  ? `Bloqueado hasta las ${blockedLabel}`
+                  : "Chat bloqueado"
               : "Pregunta algo sobre el modelo…"
           }
           className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500 disabled:bg-gray-50 disabled:text-gray-500"

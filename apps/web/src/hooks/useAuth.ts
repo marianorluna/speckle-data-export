@@ -10,7 +10,7 @@ import {
   setAccessToken,
 } from "../lib/api";
 
-export type UserRole = "admin" | "guest";
+export type UserRole = "admin" | "guest" | "guest_extended";
 
 export type AuthUser = {
   id: number;
@@ -84,7 +84,9 @@ export function useAuth() {
     isAuthenticated,
     user: userQuery.data ?? null,
     isAdmin: userQuery.data?.role === "admin",
-    isGuest: userQuery.data?.role === "guest",
+    isGuest:
+      userQuery.data?.role === "guest" ||
+      userQuery.data?.role === "guest_extended",
     isLoadingUser: userQuery.isLoading,
     loginError:
       loginMutation.error instanceof ApiError

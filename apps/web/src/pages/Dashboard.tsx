@@ -213,6 +213,7 @@ export function DashboardPage() {
     {
       id: "viewer",
       label: "Visor 3D",
+      shortLabel: "3D",
       panel: (
         <ViewerPanel
           selectedIds={selectedIds}

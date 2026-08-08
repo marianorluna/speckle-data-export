@@ -101,21 +101,25 @@ Registro de las decisiones técnicas relevantes del proyecto. Una entrada por de
 
 ---
 
-### ADR-011 — Roles admin/guest, cuota chat por IP y viewer token separado
+### ADR-011 — Roles admin/guest/guest_extended, cuota chat y viewer token separado
 
 - **Fecha:** 2026-08-08
-- **Estado:** Aceptada
-- **Contexto:** La demo hosted para LinkedIn necesita un usuario invitado público sin dar privilegios de admin ni quemar OpenRouter / filtrar el PAT de escritura Speckle.
+- **Estado:** Aceptada (ampliada 2026-08-08)
+- **Contexto:** La demo hosted para LinkedIn necesita un usuario invitado público sin dar privilegios de admin ni quemar OpenRouter / filtrar el PAT de escritura Speckle. También hace falta un invitado con más intentos (entregado por el admin) sin elevar el límite del demo público.
 - **Opciones consideradas:**
   1. Un solo admin compartido — cualquiera puede ingest y abusar del LLM.
   2. Dashboard 100% público sin login — rompe viewer-config autenticado y no limita chat.
   3. Roles `admin` | `guest` + rate limit guest + PAT de viewer distinto — encaja con el MVP y ADR-005.
+  4. Mismo `guest` con dos emails y un solo límite — el extendido no gana cuota en la misma IP.
 - **Decision:**
-  - Columna `users.role` (`admin` | `guest`); seed upsert desde `ADMIN_*` y `GUEST_*`.
+  - Columna `users.role` (`admin` | `guest` | `guest_extended`); seed upsert desde `ADMIN_*`, `GUEST_*` y `GUEST_EXTENDED_*`.
   - `require_admin` en ingest y resolve QC; chat y viewer-config aceptan cualquier JWT activo.
-  - Guest: máximo `CHAT_GUEST_DAILY_LIMIT` (default 3) preguntas/día UTC por IP (`X-Forwarded-For` tras proxy); admin exento. Contador in-memory (un worker).
+  - `guest`: máximo `CHAT_GUEST_DAILY_LIMIT` (default 3) preguntas **billables**/día UTC por IP (`X-Forwarded-For` tras proxy).
+  - `guest_extended`: máximo `CHAT_GUEST_EXTENDED_DAILY_LIMIT` (default 50) preguntas billables/día UTC por user id.
+  - Billable = respuesta `type=query` con `element_ids` no vacíos (botón «Ver en visor»). Errores, refused y agregados sin highlight no consumen cuota.
+  - Contador in-memory (un worker). Admin exento.
   - `SPECKLE_VIEWER_TOKEN` es lo que recibe el frontend; `SPECKLE_TOKEN` queda en servidor.
-- **Consecuencias:** Password de invitado puede publicarse. Multi-worker / varios nodos requieren store compartido para la cuota. No es multi-tenant.
+- **Consecuencias:** Password de invitado público puede publicarse; el extendido no. Multi-worker / varios nodos requieren store compartido para la cuota. No es multi-tenant.
 
 ---
 

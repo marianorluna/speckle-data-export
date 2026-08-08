@@ -46,11 +46,14 @@ Abre `.env` y completa los valores. Variables obligatorias:
 - `JWT_SECRET` — clave secreta para firmar tokens JWT
 - `ADMIN_EMAIL` / `ADMIN_PASSWORD_HASH` — usuario admin (escritura: ingest, resolver QC)
 - `GUEST_EMAIL` / `GUEST_PASSWORD_HASH` — usuario invitado (demo; chat limitado por IP)
+- `GUEST_EXTENDED_EMAIL` / `GUEST_EXTENDED_PASSWORD_HASH` — invitado con más cuota (por user id; no publicar)
 
 Opcionales:
 
 - `OPENROUTER_API_KEY` — chat IA
-- `CHAT_GUEST_DAILY_LIMIT` — default `3` (preguntas/día UTC por IP para guest; admin exento)
+- `CHAT_GUEST_DAILY_LIMIT` — default `3` (preguntas billables/día UTC por IP para `guest`; admin exento)
+- `CHAT_GUEST_EXTENDED_DAILY_LIMIT` — default `50` (preguntas billables/día UTC por user id para `guest_extended`)
+- Una pregunta es billable solo si la respuesta incluye `element_ids` (habilita «Ver en visor»).
 
 ---
 

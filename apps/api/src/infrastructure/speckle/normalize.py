@@ -52,14 +52,23 @@ def normalize_speckle_object(raw: dict[str, Any]) -> NormalizedBimElement | None
         or _as_str(props.get("Type"))
     )
     level = _extract_level(raw, props, parameters)
-    volume = _as_float(raw.get("volume")) or _as_float(props.get("volume")) or _as_float(
-        parameters.get("volume")
+    volume = (
+        _as_float(raw.get("volume"))
+        or _as_float(props.get("volume"))
+        or _as_float(parameters.get("volume"))
+        or _as_float(parameters.get("Volume"))
     )
-    area = _as_float(raw.get("area")) or _as_float(props.get("area")) or _as_float(
-        parameters.get("area")
+    area = (
+        _as_float(raw.get("area"))
+        or _as_float(props.get("area"))
+        or _as_float(parameters.get("area"))
+        or _as_float(parameters.get("Area"))
     )
-    length = _as_float(raw.get("length")) or _as_float(props.get("length")) or _as_float(
-        parameters.get("length")
+    length = (
+        _as_float(raw.get("length"))
+        or _as_float(props.get("length"))
+        or _as_float(parameters.get("length"))
+        or _as_float(parameters.get("Length"))
     )
 
     return NormalizedBimElement(
