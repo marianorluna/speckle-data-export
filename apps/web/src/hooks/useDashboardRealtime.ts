@@ -8,6 +8,7 @@ const DASHBOARD_QUERY_KEYS = [
   ["elements"],
   ["categories"],
   ["levels"],
+  ["completeness"],
 ] as const;
 
 /**

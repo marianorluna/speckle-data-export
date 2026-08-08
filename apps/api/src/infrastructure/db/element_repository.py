@@ -32,6 +32,9 @@ def _json_param_path(param_name: str) -> str:
     return f"$.{param_name}"
 
 
+CompletenessBucket = str  # "missing_level" | "missing_fire" | "complete"
+
+
 def _missing_param_clause(param_name: str):
     path = _json_param_path(param_name)
     extracted = func.json_extract(BimElementModel.parameters, path)
@@ -39,6 +42,30 @@ def _missing_param_clause(param_name: str):
         extracted.is_(None),
         extracted == "",
         extracted == "null",
+    )
+
+
+def _has_param_clause(param_name: str):
+    path = _json_param_path(param_name)
+    extracted = func.json_extract(BimElementModel.parameters, path)
+    return and_(
+        extracted.is_not(None),
+        extracted != "",
+        extracted != "null",
+    )
+
+
+def _missing_level_clause():
+    return or_(
+        BimElementModel.level.is_(None),
+        BimElementModel.level == "",
+    )
+
+
+def _has_level_clause():
+    return and_(
+        BimElementModel.level.is_not(None),
+        BimElementModel.level != "",
     )
 
 
@@ -65,19 +92,22 @@ class ElementRepository(BaseRepository[BimElementModel]):
         row = await self.upsert(filter_by={"element_id": element_id}, values=values)
         return row, created
 
-    def _filter_statement(
+    def _filter_conditions(
         self,
         *,
         category: str | None = None,
         level: str | None = None,
         search: str | None = None,
         missing_param: str | None = None,
-    ) -> Select[tuple[BimElementModel]]:
-        statement = select(BimElementModel)
+        missing_level: bool = False,
+        completeness: CompletenessBucket | None = None,
+    ) -> list[object]:
         conditions: list[object] = []
         if category is not None:
             conditions.append(BimElementModel.category == category)
-        if level is not None:
+        if missing_level or completeness == "missing_level":
+            conditions.append(_missing_level_clause())
+        elif level is not None:
             conditions.append(BimElementModel.level == level)
         if search:
             pattern = f"%{search}%"
@@ -90,6 +120,33 @@ class ElementRepository(BaseRepository[BimElementModel]):
             )
         if missing_param:
             conditions.append(_missing_param_clause(missing_param))
+        if completeness == "missing_fire":
+            conditions.append(_has_level_clause())
+            conditions.append(_missing_param_clause("fire_rating"))
+        elif completeness == "complete":
+            conditions.append(_has_level_clause())
+            conditions.append(_has_param_clause("fire_rating"))
+        return conditions
+
+    def _filter_statement(
+        self,
+        *,
+        category: str | None = None,
+        level: str | None = None,
+        search: str | None = None,
+        missing_param: str | None = None,
+        missing_level: bool = False,
+        completeness: CompletenessBucket | None = None,
+    ) -> Select[tuple[BimElementModel]]:
+        statement = select(BimElementModel)
+        conditions = self._filter_conditions(
+            category=category,
+            level=level,
+            search=search,
+            missing_param=missing_param,
+            missing_level=missing_level,
+            completeness=completeness,
+        )
         if conditions:
             statement = statement.where(and_(*conditions))
         return statement
@@ -101,6 +158,8 @@ class ElementRepository(BaseRepository[BimElementModel]):
         level: str | None = None,
         search: str | None = None,
         missing_param: str | None = None,
+        missing_level: bool = False,
+        completeness: CompletenessBucket | None = None,
         skip: int = 0,
         limit: int = 100,
     ) -> tuple[list[BimElementModel], int]:
@@ -110,6 +169,8 @@ class ElementRepository(BaseRepository[BimElementModel]):
             level=level,
             search=search,
             missing_param=missing_param,
+            missing_level=missing_level,
+            completeness=completeness,
         )
         count_stmt = select(func.count()).select_from(base.subquery())
         total = int((await self._session.execute(count_stmt)).scalar_one())
@@ -132,23 +193,90 @@ class ElementRepository(BaseRepository[BimElementModel]):
         rows = (await self._session.execute(statement)).scalars().all()
         return {element_id: element_id for element_id in rows}
 
-    async def count_by_category(self) -> list[tuple[str, int]]:
-        statement = (
-            select(BimElementModel.category, func.count())
-            .group_by(BimElementModel.category)
-            .order_by(func.count().desc(), BimElementModel.category)
+    def _apply_facet_filters(
+        self,
+        statement: Select[Any],
+        *,
+        category: str | None = None,
+        level: str | None = None,
+        missing_level: bool = False,
+        completeness: CompletenessBucket | None = None,
+    ) -> Select[Any]:
+        conditions = self._filter_conditions(
+            category=category,
+            level=level,
+            missing_level=missing_level,
+            completeness=completeness,
         )
+        if conditions:
+            return statement.where(and_(*conditions))
+        return statement
+
+    async def count_by_category(
+        self,
+        *,
+        level: str | None = None,
+        missing_level: bool = False,
+        completeness: CompletenessBucket | None = None,
+    ) -> list[tuple[str, int]]:
+        statement = self._apply_facet_filters(
+            select(BimElementModel.category, func.count()).group_by(
+                BimElementModel.category
+            ),
+            level=level,
+            missing_level=missing_level,
+            completeness=completeness,
+        ).order_by(func.count().desc(), BimElementModel.category)
         result = await self._session.execute(statement)
         return [(str(cat), int(count)) for cat, count in result.all()]
 
-    async def count_by_level(self) -> list[tuple[str | None, int]]:
-        statement = (
-            select(BimElementModel.level, func.count())
-            .group_by(BimElementModel.level)
-            .order_by(func.count().desc())
-        )
+    async def count_by_level(
+        self,
+        *,
+        category: str | None = None,
+        completeness: CompletenessBucket | None = None,
+    ) -> list[tuple[str | None, int]]:
+        statement = self._apply_facet_filters(
+            select(BimElementModel.level, func.count()).group_by(BimElementModel.level),
+            category=category,
+            completeness=completeness,
+        ).order_by(func.count().desc())
         result = await self._session.execute(statement)
         return [(lvl, int(count)) for lvl, count in result.all()]
+
+    async def count_completeness_buckets(
+        self,
+        *,
+        category: str | None = None,
+        level: str | None = None,
+        missing_level: bool = False,
+    ) -> dict[str, int]:
+        """Mutually exclusive QC buckets for the completeness chart."""
+        base_conditions = self._filter_conditions(
+            category=category,
+            level=level,
+            missing_level=missing_level,
+        )
+
+        async def _count(extra: list[object]) -> int:
+            conditions = [*base_conditions, *extra]
+            statement = select(func.count()).select_from(BimElementModel)
+            if conditions:
+                statement = statement.where(and_(*conditions))
+            return int((await self._session.execute(statement)).scalar_one())
+
+        missing_level_count = await _count([_missing_level_clause()])
+        missing_fire_count = await _count(
+            [_has_level_clause(), _missing_param_clause("fire_rating")]
+        )
+        complete_count = await _count(
+            [_has_level_clause(), _has_param_clause("fire_rating")]
+        )
+        return {
+            "missing_level": missing_level_count,
+            "missing_fire": missing_fire_count,
+            "complete": complete_count,
+        }
 
     async def compute_kpis(self) -> dict[str, object]:
         """Aggregate KPIs with SQL (count / sum / group_by / json_extract)."""

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -11,80 +12,42 @@ import {
 import type { BarShapeProps } from "recharts";
 
 import { useCategories } from "../../hooks/useFacets";
-import type { CategoryCount } from "../../hooks/useFacets";
+import type { OverviewCrossFilter } from "../../hooks/useOverviewCrossFilter";
 import { Card } from "../ui/Card";
 import { ErrorMessage } from "../ui/ErrorMessage";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { chartColorAt } from "./chartPalette";
+import {
+  OTHERS_FILL,
+  TOP_N,
+  topNWithOthers,
+  type TopNBarRow,
+} from "./topNWithOthers";
 
-const TOP_N = 10;
-const OTHERS_LABEL = "Otros";
-const OTHERS_FILL = "#94a3b8"; // slate-400
-
-type CategoryBarRow = {
-  category: string;
-  count: number;
-  percent: number;
-  isOthers: boolean;
-  othersCount?: number;
+type CategoryChartProps = {
+  filters?: OverviewCrossFilter;
+  activeCategory?: string;
+  onSelectCategory?: (category: string | null) => void;
 };
 
-/** Keep top N by count; fold the long tail into a single "Otros" bucket. */
-export function topNWithOthers(
-  rows: CategoryCount[],
-  topN: number = TOP_N,
-): { chartRows: CategoryBarRow[]; totalCategories: number; totalElements: number } {
-  const totalElements = rows.reduce((sum, row) => sum + row.count, 0);
-  const sorted = [...rows].sort((a, b) => b.count - a.count);
-  const head = sorted.slice(0, topN);
-  const tail = sorted.slice(topN);
-  const othersTotal = tail.reduce((sum, row) => sum + row.count, 0);
-
-  const toRow = (
-    category: string,
-    count: number,
-    extra?: Partial<CategoryBarRow>,
-  ): CategoryBarRow => ({
-    category,
-    count,
-    percent: totalElements > 0 ? (count / totalElements) * 100 : 0,
-    isOthers: false,
-    ...extra,
-  });
-
-  const chartRows: CategoryBarRow[] = head.map((row) =>
-    toRow(row.category, row.count),
-  );
-
-  if (tail.length > 0) {
-    chartRows.push(
-      toRow(OTHERS_LABEL, othersTotal, {
-        isOthers: true,
-        othersCount: tail.length,
-      }),
-    );
-  }
-
-  // First row renders at the top of a vertical BarChart → keep descending order.
-  return {
-    chartRows,
-    totalCategories: rows.length,
-    totalElements,
-  };
-}
-
-function ColoredBar(props: BarShapeProps) {
-  const payload = props.payload as CategoryBarRow | undefined;
+function ColoredBar(
+  props: BarShapeProps & { activeCategory?: string },
+) {
+  const payload = props.payload as TopNBarRow | undefined;
   const index =
-    typeof props.index === "number"
-      ? props.index
-      : Number(props.index) || 0;
-  const fill = payload?.isOthers ? OTHERS_FILL : chartColorAt(index);
-  return <Rectangle {...props} fill={fill} />;
+    typeof props.index === "number" ? props.index : Number(props.index) || 0;
+  const baseFill = payload?.isOthers ? OTHERS_FILL : chartColorAt(index);
+  const isActive =
+    props.activeCategory !== undefined &&
+    payload !== undefined &&
+    !payload.isOthers &&
+    payload.name === props.activeCategory;
+  const hasSelection = props.activeCategory !== undefined;
+  const opacity = !hasSelection || isActive || payload?.isOthers ? 1 : 0.35;
+  return <Rectangle {...props} fill={baseFill} fillOpacity={opacity} />;
 }
 
 const LABEL_FONT_SIZE = 11;
-/** Approx glyph width for 11px UI sans — keeps Y-axis band tight to labels. */
 const LABEL_CHAR_PX = 6.7;
 const LABEL_AXIS_PAD = 12;
 
@@ -124,7 +87,7 @@ function CategoryTooltip({
   payload,
 }: {
   active?: boolean;
-  payload?: ReadonlyArray<{ payload?: CategoryBarRow }>;
+  payload?: ReadonlyArray<{ payload?: TopNBarRow }>;
 }) {
   if (!active || !payload?.length) {
     return null;
@@ -135,7 +98,7 @@ function CategoryTooltip({
   }
   return (
     <div className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm">
-      <p className="font-medium text-gray-900">{row.category}</p>
+      <p className="font-medium text-gray-900">{row.name}</p>
       <p className="text-gray-600">
         {row.count} ({row.percent.toFixed(1)}%)
       </p>
@@ -148,8 +111,22 @@ function CategoryTooltip({
   );
 }
 
-export function CategoryChart() {
-  const { data, isLoading, isError, error, refetch } = useCategories();
+export function CategoryChart({
+  filters = {},
+  activeCategory,
+  onSelectCategory,
+}: CategoryChartProps) {
+  const { data, isLoading, isError, error, refetch } = useCategories(filters);
+  const [entranceDone, setEntranceDone] = useState(false);
+  const chartReady = !isLoading && !isError;
+
+  useEffect(() => {
+    if (!chartReady || entranceDone) {
+      return;
+    }
+    const timer = window.setTimeout(() => setEntranceDone(true), 2500);
+    return () => window.clearTimeout(timer);
+  }, [chartReady, entranceDone]);
 
   if (isLoading) {
     return (
@@ -174,26 +151,37 @@ export function CategoryChart() {
     );
   }
 
-  const { chartRows, totalCategories } = topNWithOthers(data ?? []);
-  const shownNamed = Math.min(TOP_N, totalCategories);
+  const named = (data ?? []).map((row) => ({
+    name: row.category,
+    count: row.count,
+  }));
+  const { chartRows, totalNames } = topNWithOthers(named);
+  const shownNamed = Math.min(TOP_N, totalNames);
   const subtitle =
-    totalCategories > TOP_N
-      ? `Top ${shownNamed} de ${totalCategories} + Otros`
-      : `${totalCategories} categorías`;
-  const yAxisWidth = estimateYAxisWidth(chartRows.map((row) => row.category));
+    totalNames > TOP_N
+      ? `Top ${shownNamed} de ${totalNames} + Otros`
+      : `${totalNames} categorías`;
+  const yAxisWidth = estimateYAxisWidth(chartRows.map((row) => row.name));
+
+  const handleBarClick = (row: TopNBarRow) => {
+    if (!onSelectCategory || row.isOthers) {
+      return;
+    }
+    onSelectCategory(row.name);
+  };
 
   return (
     <Card
       title="Elementos por categoría"
       subtitle={subtitle}
-      className="flex h-full min-h-0 flex-col p-4"
+      className="flex h-full min-h-0 flex-col p-3"
     >
       {chartRows.length === 0 ? (
         <p className="py-8 text-center text-sm text-gray-500">
           Sin datos de categorías
         </p>
       ) : (
-        <div className="h-[280px] w-full min-w-0 min-h-0 flex-1 lg:h-auto">
+        <div className="h-[200px] w-full min-w-0 min-h-0 flex-1 lg:h-auto">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               layout="vertical"
@@ -212,7 +200,7 @@ export function CategoryChart() {
               />
               <YAxis
                 type="category"
-                dataKey="category"
+                dataKey="name"
                 width={yAxisWidth}
                 tick={<CategoryYTick />}
                 interval={0}
@@ -223,8 +211,19 @@ export function CategoryChart() {
               <Bar
                 dataKey="count"
                 name="Elementos"
-                shape={ColoredBar}
+                shape={(props: BarShapeProps) => (
+                  <ColoredBar {...props} activeCategory={activeCategory} />
+                )}
                 radius={[0, 4, 4, 0]}
+                isAnimationActive={entranceDone ? false : "auto"}
+                onAnimationEnd={() => setEntranceDone(true)}
+                cursor={onSelectCategory ? "pointer" : undefined}
+                onClick={(item) => {
+                  const row = item?.payload as TopNBarRow | undefined;
+                  if (row) {
+                    handleBarClick(row);
+                  }
+                }}
               />
             </BarChart>
           </ResponsiveContainer>

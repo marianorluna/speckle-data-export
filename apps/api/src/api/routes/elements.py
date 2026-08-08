@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
 
@@ -11,12 +11,15 @@ from src.api.schemas import (
     ApiDataResponse,
     ApiListResponse,
     CategoryCountOut,
+    CompletenessOut,
     ElementOut,
     LevelCountOut,
 )
 from src.infrastructure.db.element_repository import ElementRepository
 
 router = APIRouter()
+
+CompletenessFilter = Literal["missing_level", "missing_fire", "complete"]
 
 
 @router.get("", response_model=ApiListResponse[ElementOut])
@@ -26,6 +29,8 @@ async def list_elements(
     level: Annotated[str | None, Query()] = None,
     search: Annotated[str | None, Query()] = None,
     missing_param: Annotated[str | None, Query()] = None,
+    missing_level: Annotated[bool, Query()] = False,
+    completeness: Annotated[CompletenessFilter | None, Query()] = None,
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=1000)] = 100,
 ) -> ApiListResponse[ElementOut]:
@@ -37,6 +42,8 @@ async def list_elements(
             level=level,
             search=search,
             missing_param=missing_param,
+            missing_level=missing_level,
+            completeness=completeness,
             skip=skip,
             limit=limit,
         )
@@ -67,23 +74,74 @@ async def get_element_map(session: SessionDep) -> ApiDataResponse[dict[str, str]
 
 
 @router.get("/categories", response_model=ApiDataResponse[list[CategoryCountOut]])
-async def list_categories(session: SessionDep) -> ApiDataResponse[list[CategoryCountOut]]:
-    """Unique categories with element counts."""
+async def list_categories(
+    session: SessionDep,
+    level: Annotated[str | None, Query()] = None,
+    missing_level: Annotated[bool, Query()] = False,
+    completeness: Annotated[CompletenessFilter | None, Query()] = None,
+) -> ApiDataResponse[list[CategoryCountOut]]:
+    """Unique categories with element counts (optional cross-filters)."""
     repo = ElementRepository(session)
-    pairs = await repo.count_by_category()
+    try:
+        pairs = await repo.count_by_category(
+            level=level,
+            missing_level=missing_level,
+            completeness=completeness,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
     return ApiDataResponse(
         data=[CategoryCountOut(category=cat, count=count) for cat, count in pairs],
     )
 
 
 @router.get("/levels", response_model=ApiDataResponse[list[LevelCountOut]])
-async def list_levels(session: SessionDep) -> ApiDataResponse[list[LevelCountOut]]:
-    """Unique levels with element counts."""
+async def list_levels(
+    session: SessionDep,
+    category: Annotated[str | None, Query()] = None,
+    completeness: Annotated[CompletenessFilter | None, Query()] = None,
+) -> ApiDataResponse[list[LevelCountOut]]:
+    """Unique levels with element counts (optional cross-filters)."""
     repo = ElementRepository(session)
-    pairs = await repo.count_by_level()
+    try:
+        pairs = await repo.count_by_level(
+            category=category,
+            completeness=completeness,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
     return ApiDataResponse(
         data=[LevelCountOut(level=lvl, count=count) for lvl, count in pairs],
     )
+
+
+@router.get("/completeness", response_model=ApiDataResponse[CompletenessOut])
+async def get_completeness(
+    session: SessionDep,
+    category: Annotated[str | None, Query()] = None,
+    level: Annotated[str | None, Query()] = None,
+    missing_level: Annotated[bool, Query()] = False,
+) -> ApiDataResponse[CompletenessOut]:
+    """Mutually exclusive QC buckets (optional category/level cross-filters)."""
+    repo = ElementRepository(session)
+    try:
+        buckets = await repo.count_completeness_buckets(
+            category=category,
+            level=level,
+            missing_level=missing_level,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    return ApiDataResponse(data=CompletenessOut.model_validate(buckets))
 
 
 @router.get("/{element_id}", response_model=ApiDataResponse[ElementOut])

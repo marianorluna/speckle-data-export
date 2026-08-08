@@ -7,6 +7,7 @@ export const API_ENDPOINTS = {
   elementsMap: "/api/elements/map",
   elementCategories: "/api/elements/categories",
   elementLevels: "/api/elements/levels",
+  elementCompleteness: "/api/elements/completeness",
   kpis: "/api/kpis",
   authMe: "/api/auth/me",
   authToken: "/api/auth/token",

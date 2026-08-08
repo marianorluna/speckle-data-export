@@ -32,6 +32,8 @@ type TabsProps = {
    * Use for heavy panels that should warm up in the background (e.g. Speckle).
    */
   preloadTabIds?: string[];
+  /** Optional content aligned to the right of the tab list (e.g. clear filters). */
+  trailing?: ReactNode;
 };
 
 /**
@@ -47,6 +49,7 @@ export function Tabs({
   panelClassName = "",
   keepMounted = true,
   preloadTabIds = [],
+  trailing,
 }: TabsProps) {
   const baseId = useId();
   const initial =
@@ -118,34 +121,39 @@ export function Tabs({
 
   return (
     <div className={`flex min-h-0 flex-col ${className}`.trim()}>
-      <div
-        role="tablist"
-        aria-label="Secciones del dashboard"
-        className="flex shrink-0 gap-1 border-b border-gray-200"
-      >
-        {tabs.map((tab, index) => {
-          const selected = tab.id === active.id;
-          return (
-            <button
-              key={tab.id}
-              id={`${baseId}-tab-${tab.id}`}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              aria-controls={`${baseId}-panel-${tab.id}`}
-              tabIndex={selected ? 0 : -1}
-              onClick={() => selectTab(tab.id)}
-              onKeyDown={(event) => onTabKeyDown(event, index)}
-              className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors sm:px-4 ${
-                selected
-                  ? "border-gray-900 text-gray-900"
-                  : "border-transparent text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
+      <div className="flex shrink-0 items-center gap-2 border-b border-gray-200">
+        <div
+          role="tablist"
+          aria-label="Secciones del dashboard"
+          className="flex min-w-0 flex-1 gap-1"
+        >
+          {tabs.map((tab, index) => {
+            const selected = tab.id === active.id;
+            return (
+              <button
+                key={tab.id}
+                id={`${baseId}-tab-${tab.id}`}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                aria-controls={`${baseId}-panel-${tab.id}`}
+                tabIndex={selected ? 0 : -1}
+                onClick={() => selectTab(tab.id)}
+                onKeyDown={(event) => onTabKeyDown(event, index)}
+                className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors sm:px-4 ${
+                  selected
+                    ? "border-gray-900 text-gray-900"
+                    : "border-transparent text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+        {trailing ? (
+          <div className="shrink-0 self-center pr-1 pb-0.5">{trailing}</div>
+        ) : null}
       </div>
 
       {keepMounted

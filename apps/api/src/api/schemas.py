@@ -54,6 +54,14 @@ class LevelCountOut(BaseModel):
     count: int
 
 
+class CompletenessOut(BaseModel):
+    """Mutually exclusive data-quality buckets for the Resumen chart."""
+
+    missing_level: int
+    missing_fire: int
+    complete: int
+
+
 class KpiOut(BaseModel):
     """Aggregated model metrics (matches GET /api/kpis payload)."""
 
