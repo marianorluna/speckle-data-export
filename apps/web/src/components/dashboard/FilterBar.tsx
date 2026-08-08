@@ -3,14 +3,14 @@ import { useEffect, useState } from "react";
 import type { ElementFilters } from "../../hooks/useElements";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useCategories, useLevels } from "../../hooks/useFacets";
+import { Select } from "../ui/Select";
 
 type FilterBarProps = {
   filters: ElementFilters;
   onChange: (updater: (prev: ElementFilters) => ElementFilters) => void;
 };
 
-const selectClassName =
-  "min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 sm:flex-none sm:min-w-[10rem]";
+const selectClassName = "min-w-0 flex-1 sm:flex-none sm:min-w-[10rem]";
 
 /**
  * Missing-param options map to API `missing_param` (JSON keys only).
@@ -37,6 +37,26 @@ export function FilterBar({ filters, onChange }: FilterBarProps) {
     });
   }, [debouncedSearch, onChange]);
 
+  const categoryOptions = [
+    { value: "", label: "Todas las categorías" },
+    ...(categoriesQuery.data ?? []).map((row) => ({
+      value: row.category,
+      label: `${row.category} (${row.count})`,
+    })),
+  ];
+
+  const levelOptions = [
+    { value: "", label: "Todos los niveles" },
+    ...(levelsQuery.data ?? [])
+      .filter((row): row is { level: string; count: number } =>
+        Boolean(row.level),
+      )
+      .map((row) => ({
+        value: row.level,
+        label: `${row.level} (${row.count})`,
+      })),
+  ];
+
   return (
     <div className="flex flex-wrap gap-3">
       <input
@@ -48,59 +68,47 @@ export function FilterBar({ filters, onChange }: FilterBarProps) {
         aria-label="Buscar elementos"
       />
 
-      <select
+      <Select
         className={selectClassName}
         value={filters.category ?? ""}
-        onChange={(event) => {
-          const category = event.target.value || undefined;
-          onChange((prev) => ({ ...prev, category, skip: 0 }));
+        options={categoryOptions}
+        onChange={(category) => {
+          onChange((prev) => ({
+            ...prev,
+            category: category || undefined,
+            skip: 0,
+          }));
         }}
         aria-label="Filtrar por categoría"
-      >
-        <option value="">Todas las categorías</option>
-        {(categoriesQuery.data ?? []).map((row) => (
-          <option key={row.category} value={row.category}>
-            {row.category} ({row.count})
-          </option>
-        ))}
-      </select>
+      />
 
-      <select
+      <Select
         className={selectClassName}
         value={filters.level ?? ""}
-        onChange={(event) => {
-          const level = event.target.value || undefined;
-          onChange((prev) => ({ ...prev, level, skip: 0 }));
+        options={levelOptions}
+        onChange={(level) => {
+          onChange((prev) => ({
+            ...prev,
+            level: level || undefined,
+            skip: 0,
+          }));
         }}
         aria-label="Filtrar por nivel"
-      >
-        <option value="">Todos los niveles</option>
-        {(levelsQuery.data ?? [])
-          .filter((row): row is { level: string; count: number } =>
-            Boolean(row.level),
-          )
-          .map((row) => (
-            <option key={row.level} value={row.level}>
-              {row.level} ({row.count})
-            </option>
-          ))}
-      </select>
+      />
 
-      <select
+      <Select
         className={selectClassName}
         value={filters.missing_param ?? ""}
-        onChange={(event) => {
-          const missing_param = event.target.value || undefined;
-          onChange((prev) => ({ ...prev, missing_param, skip: 0 }));
+        options={MISSING_PARAM_OPTIONS}
+        onChange={(missing_param) => {
+          onChange((prev) => ({
+            ...prev,
+            missing_param: missing_param || undefined,
+            skip: 0,
+          }));
         }}
         aria-label="Filtrar por parámetro faltante"
-      >
-        {MISSING_PARAM_OPTIONS.map((opt) => (
-          <option key={opt.label} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+      />
     </div>
   );
 }
