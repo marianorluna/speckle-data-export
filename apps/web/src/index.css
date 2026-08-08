@@ -1,1 +1,22 @@
 @import "tailwindcss";
+
+/* Recharts 3.x adds tabindex + keyboard handlers for a11y; the browser then
+   paints its default focus ring (black box) over the chart on click. The
+   charts have no keyboard interaction to announce, so drop the ring on both
+   the wrapper and the SVG shapes. */
+.recharts-wrapper:focus,
+.recharts-wrapper:focus-visible,
+.recharts-wrapper :focus,
+.recharts-wrapper :focus-visible,
+.recharts-surface:focus,
+.recharts-surface:focus-visible,
+.recharts-sector:focus,
+.recharts-sector:focus-visible,
+.recharts-rectangle:focus,
+.recharts-rectangle:focus-visible,
+.recharts-pie-sector:focus,
+.recharts-pie-sector:focus-visible,
+.recharts-bar-rectangle:focus,
+.recharts-bar-rectangle:focus-visible {
+  outline: none;
+}
