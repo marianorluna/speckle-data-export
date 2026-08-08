@@ -3,9 +3,12 @@ import { Navigate } from "react-router-dom";
 
 import { useAuth } from "../hooks/useAuth";
 
+const DEMO_EMAIL = "invitado@marianorluna.com";
+const DEMO_PASSWORD = "abc123";
+
 export function LoginPage() {
   const { login, isAuthenticated, isLoggingIn, loginError } = useAuth();
-  const [email, setEmail] = useState("admin@bim.local");
+  const [email, setEmail] = useState(DEMO_EMAIL);
   const [password, setPassword] = useState("");
 
   if (isAuthenticated) {
@@ -21,6 +24,11 @@ export function LoginPage() {
     }
   };
 
+  const fillDemo = () => {
+    setEmail(DEMO_EMAIL);
+    setPassword(DEMO_PASSWORD);
+  };
+
   return (
     <main className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
       <form
@@ -31,7 +39,23 @@ export function LoginPage() {
           <h1 className="text-xl font-semibold tracking-tight text-slate-900">
             BIM Dashboard
           </h1>
-          <p className="text-sm text-slate-500">Inicia sesión como admin</p>
+          <p className="text-sm text-slate-500">
+            Demo (invitado) o acceso admin
+          </p>
+        </div>
+
+        <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+          <p className="font-medium text-slate-700">Credenciales demo</p>
+          <p className="mt-1 font-mono">
+            {DEMO_EMAIL} / {DEMO_PASSWORD}
+          </p>
+          <button
+            type="button"
+            onClick={fillDemo}
+            className="mt-2 text-slate-800 underline underline-offset-2 hover:text-slate-950"
+          >
+            Rellenar invitado
+          </button>
         </div>
 
         <label className="block space-y-1 text-sm">

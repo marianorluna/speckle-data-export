@@ -5,7 +5,9 @@ from __future__ import annotations
 import re
 from datetime import datetime
 
-from sqlalchemy import Select, and_, func, or_, select
+from typing import Any
+
+from sqlalchemy import Select, and_, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.infrastructure.db.models import (
@@ -219,6 +221,15 @@ class ElementRepository(BaseRepository[BimElementModel]):
             "last_updated": last_updated if isinstance(last_updated, datetime) else None,
             "last_commit_id": last_commit,
         }
+
+    async def execute_raw_sql(self, sql: str) -> list[dict[str, Any]]:
+        """
+        Run a pre-validated read-only SQL statement and return row mappings.
+
+        Caller MUST pass SQL through ``application.sql_guard.is_safe_sql`` first.
+        """
+        result = await self._session.execute(text(sql))
+        return [dict(row) for row in result.mappings().all()]
 
 
 class SnapshotRepository(BaseRepository[ParameterSnapshotModel]):

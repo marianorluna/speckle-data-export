@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from src.api.deps import CurrentUser, SessionDep, SettingsDep
+from src.api.deps import AdminUser, SessionDep, SettingsDep
 from src.application.ingest_commit import IngestCommit
 from src.infrastructure.db.element_repository import (
     ElementRepository,
@@ -48,11 +48,11 @@ class IngestResponse(BaseModel):
 @router.post("/ingest", response_model=IngestResponse)
 async def ingest_commit(
     body: IngestRequest,
-    _current_user: CurrentUser,
+    _admin: AdminUser,
     session: SessionDep,
     settings: SettingsDep,
 ) -> IngestResponse:
-    """Trigger Speckle → SQLite ingest (admin / debug harness)."""
+    """Trigger Speckle → SQLite ingest (admin role required)."""
     stream_id = (body.stream_id or settings.speckle_stream_id or "").strip()
     if not stream_id:
         raise HTTPException(

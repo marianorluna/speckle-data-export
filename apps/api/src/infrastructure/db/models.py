@@ -81,7 +81,7 @@ class QcFindingModel(Base):
 
 
 class UserModel(Base):
-    """Admin user row for JWT authentication."""
+    """Application user row for JWT authentication (admin | guest)."""
 
     __tablename__ = "users"
 
@@ -89,6 +89,7 @@ class UserModel(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    role: Mapped[str] = mapped_column(String(32), default="admin")
 
 
 class ProcessedCommitModel(Base):

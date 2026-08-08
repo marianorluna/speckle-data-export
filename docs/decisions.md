@@ -97,7 +97,25 @@ Registro de las decisiones técnicas relevantes del proyecto. Una entrada por de
   3. OAuth2 (Google/GitHub) — mas seguro pero requiere configurar proveedores y callbacks; overkill para MVP con un solo usuario.
   4. Magic link — buena UX pero requiere servicio de email (SendGrid, Resend).
 - **Decision:** JWT con pyjwt (backend) y jose (frontend). Un solo usuario admin definido en .env (ADMIN_EMAIL, ADMIN_PASSWORD_HASH). Login via POST /api/auth/token → devuelve access_token. Middleware protege rutas de escritura. Token expira en 24h.
-- **Consecuencias:** Sin refresh token en MVP. Sin multi-usuario ni roles. Escalable a RBAC en el futuro cambiando el modelo de User.
+- **Consecuencias:** Sin refresh token en MVP. Escalable a RBAC cambiando el modelo de User (hecho en ADR-011).
+
+---
+
+### ADR-011 — Roles admin/guest, cuota chat por IP y viewer token separado
+
+- **Fecha:** 2026-08-08
+- **Estado:** Aceptada
+- **Contexto:** La demo hosted para LinkedIn necesita un usuario invitado público sin dar privilegios de admin ni quemar OpenRouter / filtrar el PAT de escritura Speckle.
+- **Opciones consideradas:**
+  1. Un solo admin compartido — cualquiera puede ingest y abusar del LLM.
+  2. Dashboard 100% público sin login — rompe viewer-config autenticado y no limita chat.
+  3. Roles `admin` | `guest` + rate limit guest + PAT de viewer distinto — encaja con el MVP y ADR-005.
+- **Decision:**
+  - Columna `users.role` (`admin` | `guest`); seed upsert desde `ADMIN_*` y `GUEST_*`.
+  - `require_admin` en ingest y resolve QC; chat y viewer-config aceptan cualquier JWT activo.
+  - Guest: máximo `CHAT_GUEST_DAILY_LIMIT` (default 3) preguntas/día UTC por IP (`X-Forwarded-For` tras proxy); admin exento. Contador in-memory (un worker).
+  - `SPECKLE_VIEWER_TOKEN` es lo que recibe el frontend; `SPECKLE_TOKEN` queda en servidor.
+- **Consecuencias:** Password de invitado puede publicarse. Multi-worker / varios nodos requieren store compartido para la cuota. No es multi-tenant.
 
 ---
 

@@ -39,11 +39,18 @@ cp .env.example .env
 
 Abre `.env` y completa los valores. Variables obligatorias:
 
-- `SPECKLE_TOKEN` — Personal Access Token (PAT); ver seccion siguiente
+- `SPECKLE_TOKEN` — Personal Access Token (PAT) **solo servidor** (ingest/poller); ver seccion siguiente
+- `SPECKLE_VIEWER_TOKEN` — PAT de **solo lectura** expuesto al frontend vía viewer-config (si vacío, se reutiliza `SPECKLE_TOKEN`; no recomendado en demo pública)
 - `SPECKLE_SERVER_URL` — host del proyecto (p. ej. `https://app.speckle.systems`)
 - `SPECKLE_STREAM_ID` — project id (en la UI nueva, Stream ≈ Project)
 - `JWT_SECRET` — clave secreta para firmar tokens JWT
-- `ADMIN_EMAIL` / `ADMIN_PASSWORD_HASH` — credenciales del unico usuario
+- `ADMIN_EMAIL` / `ADMIN_PASSWORD_HASH` — usuario admin (escritura: ingest, resolver QC)
+- `GUEST_EMAIL` / `GUEST_PASSWORD_HASH` — usuario invitado (demo; chat limitado por IP)
+
+Opcionales:
+
+- `OPENROUTER_API_KEY` — chat IA
+- `CHAT_GUEST_DAILY_LIMIT` — default `3` (preguntas/día UTC por IP para guest; admin exento)
 
 ---
 
@@ -69,6 +76,16 @@ Necesitas un **Personal Access Token** de tu usuario.
    | Version | `project.version` | Read |
 6. Deja en **No access** / 0 scopes: Workspaces, Dashboards, Automate, Account, Server, Invite, Issue, Webhook, etc.
 7. **Create**, copia el token **una sola vez** → `SPECKLE_TOKEN` en `.env`.
+
+### Token del visor (`SPECKLE_VIEWER_TOKEN`)
+
+El endpoint `GET /api/speckle/viewer-config` envía un token al navegador (cualquier usuario autenticado, incluido el invitado). En una demo pública:
+
+1. Crea un **segundo PAT** con scopes mínimos de **lectura** del proyecto/modelo.
+2. Ponlo en `SPECKLE_VIEWER_TOKEN`.
+3. Deja `SPECKLE_TOKEN` solo en el servidor (ingest/poller), con los scopes que necesite la API GraphQL de escritura/lectura del backend.
+
+Si `SPECKLE_VIEWER_TOKEN` está vacío, el API usa `SPECKLE_TOKEN` como fallback (válido en local privado; **evitar** en deploy con password de invitado pública).
 
 ### Project id (`SPECKLE_STREAM_ID`)
 

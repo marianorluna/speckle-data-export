@@ -35,7 +35,11 @@ class Settings(BaseSettings):
     jwt_expires_hours: int = 24
     admin_email: str = "admin@bim.local"
     admin_password_hash: str = ""
+    guest_email: str = ""
+    guest_password_hash: str = ""
     speckle_token: str = ""
+    # Read-oriented token exposed to the frontend via viewer-config (falls back to SPECKLE_TOKEN).
+    speckle_viewer_token: str = ""
     speckle_server_url: str = "https://speckle.xyz"
     speckle_stream_id: str = ""
     # Speckle "model" name (legacy branch). Folders use ``folder/model`` (e.g. structure/snowdon-towers-r27).
@@ -43,10 +47,22 @@ class Settings(BaseSettings):
     speckle_poll_interval_seconds: int = 30
     revit_api_key: str = ""
     ws_heartbeat_interval: int = 30
+    openrouter_api_key: str = ""
+    openrouter_model: str = "deepseek/deepseek-chat"
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    chat_guest_daily_limit: int = 3
 
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def effective_speckle_viewer_token(self) -> str:
+        """Token safe to send to the browser; prefer dedicated viewer PAT."""
+        viewer = self.speckle_viewer_token.strip()
+        if viewer:
+            return viewer
+        return self.speckle_token.strip()
 
 
 @lru_cache
@@ -94,4 +110,15 @@ async def get_current_user(
     return User.model_validate(row)
 
 
+async def require_admin(current_user: Annotated[User, Depends(get_current_user)]) -> User:
+    """Require an authenticated user with role ``admin``."""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin role required",
+        )
+    return current_user
+
+
 CurrentUser = Annotated[User, Depends(get_current_user)]
+AdminUser = Annotated[User, Depends(require_admin)]

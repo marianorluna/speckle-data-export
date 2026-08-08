@@ -1,4 +1,4 @@
-"""Seed the single admin user from ADMIN_EMAIL / ADMIN_PASSWORD_HASH.
+"""Seed admin + guest users from env (upsert by email).
 
 Usage (from apps/api with venv active)::
 
@@ -17,10 +17,12 @@ if str(_API_ROOT) not in sys.path:
     sys.path.insert(0, str(_API_ROOT))
 
 
-async def seed_admin() -> bool:
-    """Insert the admin user if the ``users`` table is empty. Returns True if created."""
+async def seed_users() -> dict[str, str]:
+    """Upsert admin (required) and guest (optional) from settings.
+
+    Returns a map of email → ``created`` | ``updated`` for rows touched.
+    """
     from src.api.deps import get_settings
-    from src.infrastructure.db.models import UserModel
     from src.infrastructure.db.session import get_session_factory, init_engine
     from src.infrastructure.db.user_repository import UserRepository
 
@@ -32,26 +34,49 @@ async def seed_admin() -> bool:
 
     init_engine()
     factory = get_session_factory()
+    results: dict[str, str] = {}
+
     async with factory() as session:
         repo = UserRepository(session)
-        if await repo.count() > 0:
-            print("Admin seed skipped: users table already has rows.")
-            return False
 
-        await repo.create(
-            UserModel(
-                email=settings.admin_email,
-                password_hash=settings.admin_password_hash,
+        admin_action = await repo.upsert_by_email(
+            email=settings.admin_email,
+            password_hash=settings.admin_password_hash,
+            role="admin",
+            is_active=True,
+        )
+        results[settings.admin_email] = admin_action
+        print(f"Admin user {admin_action}: {settings.admin_email}")
+
+        guest_email = (settings.guest_email or "").strip()
+        guest_hash = (settings.guest_password_hash or "").strip()
+        if guest_email and guest_hash:
+            guest_action = await repo.upsert_by_email(
+                email=guest_email,
+                password_hash=guest_hash,
+                role="guest",
                 is_active=True,
             )
-        )
+            results[guest_email] = guest_action
+            print(f"Guest user {guest_action}: {guest_email}")
+        elif guest_email or guest_hash:
+            print(
+                "Guest seed skipped: set both GUEST_EMAIL and GUEST_PASSWORD_HASH"
+            )
+
         await session.commit()
-        print(f"Admin user created: {settings.admin_email}")
-        return True
+
+    return results
+
+
+async def seed_admin() -> bool:
+    """Back-compat wrapper used by API lifespan. Returns True if any row created."""
+    results = await seed_users()
+    return any(action == "created" for action in results.values())
 
 
 def main() -> None:
-    asyncio.run(seed_admin())
+    asyncio.run(seed_users())
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.connection_manager import manager
 from src.api.deps import get_settings
-from src.api.routes import admin, auth, elements, kpis, qc, speckle_viewer, ws
+from src.api.routes import admin, auth, chat, elements, kpis, qc, speckle_viewer, ws
 from src.infrastructure.db.session import dispose_engine, init_engine
 from src.infrastructure.scheduler import poll_speckle_loop
 
@@ -40,14 +40,14 @@ async def _ws_heartbeat_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    """Initialize DB, seed admin, start Speckle poller + WS heartbeat."""
+    """Initialize DB, seed admin/guest users, start Speckle poller + WS heartbeat."""
     init_engine()
     try:
         from scripts.seed_admin import seed_admin
 
         await seed_admin()
     except RuntimeError as exc:
-        print(f"Admin seed skipped: {exc}")
+        print(f"User seed skipped: {exc}")
 
     poll_task = asyncio.create_task(poll_speckle_loop(), name="speckle-poller")
     heartbeat_task = asyncio.create_task(
@@ -89,6 +89,7 @@ def create_app() -> FastAPI:
     app.include_router(elements.router, prefix="/api/elements", tags=["elements"])
     app.include_router(kpis.router, prefix="/api/kpis", tags=["kpis"])
     app.include_router(qc.router, prefix="/api/qc", tags=["qc"])
+    app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
     app.include_router(
         speckle_viewer.router,
         prefix="/api/speckle",

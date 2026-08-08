@@ -6,6 +6,7 @@
 import {
   CameraController,
   DefaultViewerParams,
+  FilteringExtension,
   MeasurementsExtension,
   SectionOutlines,
   SectionTool,
@@ -21,6 +22,7 @@ import {
 let viewerInstance: Viewer | null = null;
 let cameraController: CameraController | null = null;
 let selectionExtension: SelectionExtension | null = null;
+let filteringExtension: FilteringExtension | null = null;
 let measurementsExtension: MeasurementsExtension | null = null;
 let sectionTool: SectionTool | null = null;
 /** Speckle defaults to SmoothOrbitControls ("free orbit"). */
@@ -85,16 +87,77 @@ function nodeApplicationId(node: TreeNode): string | null {
   return null;
 }
 
+function nodeHasDrawableGeometry(node: TreeNode): boolean {
+  return Boolean(node.model.renderView?.hasGeometry);
+}
+
+/** Collect mesh node ids under ``root`` (tree children + nestedNodes). */
+function collectDrawableNodeIds(root: TreeNode): string[] {
+  const ids = new Set<string>();
+
+  const visit = (node: TreeNode): void => {
+    if (nodeHasDrawableGeometry(node)) {
+      ids.add(node.model.id);
+    }
+    const nested = node.model.nestedNodes;
+    if (Array.isArray(nested)) {
+      for (const child of nested) {
+        visit(child);
+      }
+    }
+  };
+
+  for (const node of root.all(() => true)) {
+    visit(node);
+  }
+  return [...ids];
+}
+
+/**
+ * Resolve drawable world-tree ids for an ``applicationId``.
+ *
+ * Speckle marks Revit elements as ``atomic``. ``getRenderViewsForNode`` then
+ * short-circuits to the parent even when the visible mesh lives on children —
+ * so programmatic select/highlight must walk descendants with ``hasGeometry``
+ * (the same nodes ObjectClicked hits).
+ */
 function findNodeIdsByApplicationIds(applicationIds: string[]): string[] {
   if (!viewerInstance || applicationIds.length === 0) {
     return [];
   }
   const wanted = new Set(applicationIds);
-  const nodes = viewerInstance.getWorldTree().findAll((node) => {
+  const tree = viewerInstance.getWorldTree();
+
+  // Prefer mesh nodes that themselves carry the applicationId (click path).
+  const directGeom = tree.findAll((node) => {
+    if (!nodeHasDrawableGeometry(node)) {
+      return false;
+    }
     const appId = nodeApplicationId(node);
     return appId !== null && wanted.has(appId);
   });
-  return [...new Set(nodes.map((node) => node.model.id))];
+  if (directGeom.length > 0) {
+    return [...new Set(directGeom.map((node) => node.model.id))];
+  }
+
+  // Logical parents: collect descendant meshes (ignore atomic short-circuit).
+  const parents = tree.findAll((node) => {
+    const appId = nodeApplicationId(node);
+    return appId !== null && wanted.has(appId);
+  });
+
+  const ids = new Set<string>();
+  for (const parent of parents) {
+    const drawable = collectDrawableNodeIds(parent);
+    if (drawable.length > 0) {
+      for (const id of drawable) {
+        ids.add(id);
+      }
+    } else {
+      ids.add(parent.model.id);
+    }
+  }
+  return [...ids];
 }
 
 export async function initViewer(options: ViewerInitOptions): Promise<Viewer> {
@@ -116,6 +179,7 @@ export async function initViewer(options: ViewerInitOptions): Promise<Viewer> {
 
   cameraController = viewer.createExtension(CameraController);
   selectionExtension = viewer.createExtension(SelectionExtension);
+  filteringExtension = viewer.createExtension(FilteringExtension);
   sectionTool = viewer.createExtension(SectionTool);
   viewer.createExtension(SectionOutlines);
   measurementsExtension = viewer.createExtension(MeasurementsExtension);
@@ -244,16 +308,167 @@ export function setToolMode(mode: ViewerToolMode): void {
 }
 
 /** Select objects by Revit UniqueId / Speckle ``applicationId``. */
-export function selectByApplicationIds(applicationIds: string[]): void {
+export function selectByApplicationIds(
+  applicationIds: string[],
+  options: { zoom?: boolean } = {},
+): void {
   if (!selectionExtension) {
+    return;
+  }
+  if (applicationIds.length === 0) {
+    selectionExtension.clearSelection();
     return;
   }
   const nodeIds = findNodeIdsByApplicationIds(applicationIds);
   selectionExtension.selectObjects(nodeIds, false);
+  if (options.zoom && nodeIds.length > 0) {
+    cameraController?.setCameraView(nodeIds, true);
+  }
 }
 
 export function clearSelection(): void {
   selectionExtension?.clearSelection();
+}
+
+/** Raw Speckle objects currently selected (SelectionExtension). */
+export function getSelectedRawObjects(): Record<string, unknown>[] {
+  if (!selectionExtension) {
+    return [];
+  }
+  return selectionExtension.getSelectedObjects();
+}
+
+/**
+ * Resolve Speckle raw payloads by ``applicationId`` from the loaded world tree.
+ * Prefer this over ``getSelectedRawObjects`` when syncing UI from React selection state.
+ */
+export function getRawObjectsByApplicationIds(
+  applicationIds: string[],
+): Record<string, unknown>[] {
+  if (!viewerInstance || applicationIds.length === 0) {
+    return [];
+  }
+  const wanted = new Set(applicationIds);
+  const byAppId = new Map<string, Record<string, unknown>>();
+
+  viewerInstance.getWorldTree().walk((node) => {
+    const appId = nodeApplicationId(node);
+    if (!appId || !wanted.has(appId) || byAppId.has(appId)) {
+      return true;
+    }
+    const raw = node.model.raw;
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      byAppId.set(appId, raw as Record<string, unknown>);
+    }
+    return true;
+  });
+
+  // Preserve order of requested ids.
+  return applicationIds
+    .map((id) => byAppId.get(id))
+    .filter((obj): obj is Record<string, unknown> => obj !== undefined);
+}
+
+const HIGHLIGHT_COLOR = "#f59e0b";
+
+export type ApplySelectionResult = {
+  /** Drawable world-tree nodes resolved from the requested applicationIds. */
+  matchedNodes: number;
+  /** False when the viewer singleton is not ready (e.g. mid-load / HMR). */
+  viewerReady: boolean;
+};
+
+function findParentNodeIdsByApplicationIds(applicationIds: string[]): string[] {
+  if (!viewerInstance || applicationIds.length === 0) {
+    return [];
+  }
+  const wanted = new Set(applicationIds);
+  const parents = viewerInstance.getWorldTree().findAll((node) => {
+    const appId = nodeApplicationId(node);
+    return appId !== null && wanted.has(appId);
+  });
+  return [...new Set(parents.map((node) => node.model.id))];
+}
+
+/**
+ * Tint drawable targets. Call *before* ``selectByApplicationIds`` so selection
+ * materials are applied after FilteringExtension's ``resetMaterials``.
+ */
+export function highlightByApplicationIds(applicationIds: string[]): void {
+  if (!filteringExtension) {
+    return;
+  }
+
+  filteringExtension.removeUserObjectColors();
+
+  if (applicationIds.length === 0) {
+    return;
+  }
+
+  const nodeIds = findNodeIdsByApplicationIds(applicationIds);
+  if (nodeIds.length === 0) {
+    return;
+  }
+
+  filteringExtension.setUserObjectColors([
+    { objectIds: nodeIds, color: HIGHLIGHT_COLOR },
+  ]);
+}
+
+export function resetHighlight(): void {
+  filteringExtension?.removeUserObjectColors();
+  filteringExtension?.resetFilters();
+}
+
+/**
+ * Full programmatic selection: tint + select + zoom (no isolate/ghost).
+ * Isolating hundreds of nodes made the rest of the model vanish and the
+ * camera frame a tiny/degenerate box, so the scene looked empty.
+ */
+/**
+ * Programmatic selection: tint + select + optional zoom.
+ * Used by SpeckleViewer for click ↔ React selection sync.
+ */
+export function applySelectionByApplicationIds(
+  applicationIds: string[],
+  options: { zoom?: boolean } = {},
+): ApplySelectionResult {
+  const zoom = options.zoom ?? true;
+
+  if (!viewerInstance || !filteringExtension || !selectionExtension) {
+    return { matchedNodes: 0, viewerReady: false };
+  }
+
+  if (applicationIds.length === 0) {
+    filteringExtension.resetFilters();
+    selectionExtension.clearSelection();
+    return { matchedNodes: 0, viewerReady: true };
+  }
+
+  const drawableIds = findNodeIdsByApplicationIds(applicationIds);
+  const parentIds = findParentNodeIdsByApplicationIds(applicationIds);
+  const tintIds = drawableIds.length > 0 ? drawableIds : parentIds;
+
+  if (tintIds.length === 0) {
+    filteringExtension.resetFilters();
+    selectionExtension.clearSelection();
+    return { matchedNodes: 0, viewerReady: true };
+  }
+
+  filteringExtension.resetFilters();
+  filteringExtension.setUserObjectColors([
+    { objectIds: tintIds, color: HIGHLIGHT_COLOR },
+  ]);
+  selectionExtension.selectObjects(tintIds, false);
+
+  if (zoom) {
+    cameraController?.setCameraView(tintIds, true);
+  }
+
+  return {
+    matchedNodes: tintIds.length,
+    viewerReady: true,
+  };
 }
 
 export function onObjectClicked(
@@ -263,13 +478,9 @@ export function onObjectClicked(
     return () => undefined;
   }
   const viewer = viewerInstance;
-  const listener = (event: SelectionEvent | null) => {
+    const listener = (event: SelectionEvent | null) => {
     const hit = event?.hits[0];
-    if (!hit) {
-      handler(null);
-      return;
-    }
-    handler(nodeApplicationId(hit.node));
+    handler(hit ? nodeApplicationId(hit.node) : null);
   };
   viewer.on(ViewerEvent.ObjectClicked, listener);
   const emitter = viewer as unknown as {
@@ -285,6 +496,7 @@ export function disposeViewer(): void {
   viewerInstance = null;
   cameraController = null;
   selectionExtension = null;
+  filteringExtension = null;
   measurementsExtension = null;
   sectionTool = null;
   freeOrbitActive = true;

@@ -1,4 +1,4 @@
-import { Bot, Boxes, LayoutDashboard, X } from "lucide-react";
+import { LayoutDashboard, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 import { APP_NAME } from "../../lib/constants";
@@ -7,7 +7,6 @@ const linkBase =
   "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors";
 const linkIdle = "text-gray-300 hover:bg-gray-800 hover:text-white";
 const linkActive = "bg-gray-800 text-white";
-const linkDisabled = "cursor-not-allowed text-gray-500";
 
 type SidebarProps = {
   /** Called when a nav link is activated (closes mobile drawer). */
@@ -61,16 +60,6 @@ export function Sidebar({
           <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />
           Dashboard
         </NavLink>
-
-        <span className={`${linkBase} ${linkDisabled}`} title="Próximamente">
-          <Boxes className="h-4 w-4 shrink-0" aria-hidden />
-          Elementos
-        </span>
-
-        <span className={`${linkBase} ${linkDisabled}`} title="Próximamente">
-          <Bot className="h-4 w-4 shrink-0" aria-hidden />
-          IA Chat
-        </span>
       </nav>
     </aside>
   );

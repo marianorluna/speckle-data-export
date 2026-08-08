@@ -1,10 +1,14 @@
-"""Domain entity: admin user for JWT auth (used from prompt 03)."""
+"""Domain entity: application user for JWT auth."""
+
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+UserRole = Literal["admin", "guest"]
+
 
 class User(BaseModel):
-    """Application user with bcrypt password hash."""
+    """Application user with bcrypt password hash and RBAC role."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -12,3 +16,4 @@ class User(BaseModel):
     email: str = Field(min_length=3)
     password_hash: str
     is_active: bool = True
+    role: UserRole = "admin"

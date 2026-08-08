@@ -28,6 +28,7 @@ class UserPublic(BaseModel):
     id: int
     email: str
     is_active: bool
+    role: str
 
 
 @router.post("/token", response_model=TokenResponse)
@@ -68,4 +69,5 @@ async def read_current_user(current_user: CurrentUser) -> UserPublic:
         id=current_user.id,
         email=current_user.email,
         is_active=current_user.is_active,
+        role=current_user.role,
     )

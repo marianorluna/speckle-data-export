@@ -1,4 +1,4 @@
-"""Authenticated Speckle viewer config (server URL, stream, PAT for private loads)."""
+"""Authenticated Speckle viewer config (server URL, stream, read-oriented token)."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ router = APIRouter()
 
 
 class SpeckleViewerConfigOut(BaseModel):
-    """Frontend payload to init ``@speckle/viewer`` without baking the PAT into Vite."""
+    """Frontend payload to init ``@speckle/viewer`` without baking the write PAT into Vite."""
 
     server_url: str
     stream_id: str
@@ -28,19 +28,23 @@ async def get_viewer_config(
     _user: CurrentUser,
     settings: SettingsDep,
 ) -> ApiDataResponse[SpeckleViewerConfigOut]:
-    """Return Speckle connection details for the logged-in admin.
+    """Return Speckle connection details for any logged-in user (admin or guest).
 
+    Uses ``SPECKLE_VIEWER_TOKEN`` when set (read-oriented PAT for the browser).
     Resolves the latest commit on ``SPECKLE_BRANCH_NAME`` so the viewer does not
     accidentally load another model (e.g. ``main``) in the same project.
     """
     server_url = settings.speckle_server_url.rstrip("/")
     stream_id = settings.speckle_stream_id
     branch_name = (settings.speckle_branch_name or "main").strip() or "main"
+    viewer_token = settings.effective_speckle_viewer_token
     commit_id: str | None = None
 
-    if stream_id and settings.speckle_token:
+    # Prefer server-side write token to resolve commit; fall back to viewer token.
+    resolve_token = settings.speckle_token.strip() or viewer_token
+    if stream_id and resolve_token:
         try:
-            async with SpeckleClient(server_url, settings.speckle_token) as client:
+            async with SpeckleClient(server_url, resolve_token) as client:
                 commit = await client.get_latest_commit(
                     stream_id,
                     branch_name=branch_name,
@@ -56,7 +60,7 @@ async def get_viewer_config(
         data=SpeckleViewerConfigOut(
             server_url=server_url,
             stream_id=stream_id,
-            token=settings.speckle_token,
+            token=viewer_token,
             branch_name=branch_name,
             commit_id=commit_id,
         ),

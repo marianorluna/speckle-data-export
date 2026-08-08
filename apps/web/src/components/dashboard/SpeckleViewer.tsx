@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 
 import {
+  applySelectionByApplicationIds,
   disposeViewer,
   getCameraUiState,
+  getRawObjectsByApplicationIds,
+  getSelectedRawObjects,
   getToolMode,
+  getViewer,
   initViewer,
   onObjectClicked,
   resizeViewer,
-  selectByApplicationIds,
   setCanonicalView,
   setToolMode,
   toggleFreeOrbit,
@@ -18,6 +21,7 @@ import {
 } from "../../lib/speckle";
 import { ErrorMessage } from "../ui/ErrorMessage";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
+import { SelectionInfoPanel } from "./SelectionInfoPanel";
 import { ViewerCameraMenu } from "./ViewerCameraMenu";
 import { ViewerToolbar } from "./ViewerToolbar";
 
@@ -52,8 +56,46 @@ export function SpeckleViewer({
   const [toolMode, setToolModeState] = useState<ViewerToolMode>("none");
   const [camera, setCamera] = useState<CameraUiState>(INITIAL_CAMERA);
   const [fullscreen, setFullscreen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
+  /** Local mirror for instant Selection info updates (viewer click → same tick). */
+  const [infoIds, setInfoIds] = useState<string[]>(selectedElementIds);
+
+  /** When true, skip prop→viewer sync (viewer click already applied SelectionExtension). */
+  const skipViewerSyncRef = useRef(false);
 
   const refreshCameraUi = () => setCamera(getCameraUiState());
+
+  // Keep local info ids in sync when selection comes from outside the viewer.
+  useEffect(() => {
+    setInfoIds(selectedElementIds);
+  }, [selectedElementIds]);
+
+  const infoObjects =
+    status === "ready" ? resolveSelectionInfoObjects(infoIds) : [];
+  const selectionKey = infoIds.join("|") || "none";
+
+  // Prefer SelectionExtension payload when it matches (freshest after viewer click).
+  function resolveSelectionInfoObjects(
+    ids: string[],
+  ): Record<string, unknown>[] {
+    if (ids.length === 0) {
+      return [];
+    }
+    const fromSelection = getSelectedRawObjects();
+    const selectedAppIds = fromSelection
+      .map((obj) =>
+        typeof obj.applicationId === "string" ? obj.applicationId.trim() : null,
+      )
+      .filter((id): id is string => Boolean(id));
+    if (
+      fromSelection.length > 0 &&
+      ids.length === selectedAppIds.length &&
+      ids.every((id) => selectedAppIds.includes(id))
+    ) {
+      return fromSelection;
+    }
+    return getRawObjectsByApplicationIds(ids);
+  }
 
   useEffect(() => {
     const container = containerRef.current;
@@ -114,7 +156,18 @@ export function SpeckleViewer({
     if (status !== "ready") {
       return;
     }
-    selectByApplicationIds(selectedElementIds);
+    // HMR can wipe the module singleton while React still thinks we are ready.
+    if (!getViewer()) {
+      setLoadToken((n) => n + 1);
+      return;
+    }
+    if (skipViewerSyncRef.current) {
+      skipViewerSyncRef.current = false;
+      return;
+    }
+    applySelectionByApplicationIds(selectedElementIds, {
+      zoom: selectedElementIds.length > 0,
+    });
   }, [selectedElementIds, status]);
 
   useEffect(() => {
@@ -122,9 +175,13 @@ export function SpeckleViewer({
       return;
     }
     return onObjectClicked((applicationId) => {
-      if (applicationId) {
-        onElementClick(applicationId);
-      }
+      skipViewerSyncRef.current = true;
+      // Drop previous tint/selection; keep a single pick without reframing.
+      applySelectionByApplicationIds(applicationId ? [applicationId] : [], {
+        zoom: false,
+      });
+      setInfoIds(applicationId ? [applicationId] : []);
+      onElementClick(applicationId ?? "");
     });
   }, [onElementClick, status]);
 
@@ -217,6 +274,9 @@ export function SpeckleViewer({
           <ViewerCameraMenu
             camera={camera}
             fullscreen={fullscreen}
+            infoOpen={infoOpen}
+            hasSelection={selectedElementIds.length > 0}
+            onToggleInfo={() => setInfoOpen((open) => !open)}
             onSetView={(view) => setCanonicalView(view)}
             onToggleOrthographic={() => {
               toggleOrthographic();
@@ -229,6 +289,12 @@ export function SpeckleViewer({
             onToggleFullscreen={() => {
               void toggleFullscreen();
             }}
+          />
+          <SelectionInfoPanel
+            open={infoOpen}
+            onClose={() => setInfoOpen(false)}
+            objects={infoObjects}
+            selectionKey={selectionKey}
           />
           <ViewerToolbar
             mode={toolMode}

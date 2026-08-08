@@ -66,6 +66,9 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       } catch {
         return;
       }
+      if (data.type === "ping" && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "pong" }));
+      }
       setLastMessage(data);
       const listeners = listenersRef.current.get(data.type);
       if (listeners) {

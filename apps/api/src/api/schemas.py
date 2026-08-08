@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -109,3 +109,23 @@ class ApiDataResponse(BaseModel, Generic[T]):
 
     success: bool = True
     data: T
+
+
+class ChatRequest(BaseModel):
+    """Natural-language question about the BIM model."""
+
+    question: str = Field(min_length=1, max_length=2000)
+
+
+class ChatResultOut(BaseModel):
+    """Chat / text-to-SQL response payload."""
+
+    type: Literal["query", "refused", "blocked", "error"]
+    question: str | None = None
+    answer: str
+    results: list[dict[str, Any]] = Field(default_factory=list)
+    total_results: int = 0
+    element_ids: list[str] = Field(default_factory=list)
+    sql: str | None = None
+    blocked_until: datetime | None = None
+    strikes: int | None = None

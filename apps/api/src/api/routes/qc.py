@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from src.api.deps import CurrentUser, SessionDep
+from src.api.deps import AdminUser, SessionDep
 from src.api.schemas import ApiDataResponse, ApiListResponse, QcFindingOut
 from src.infrastructure.db.element_repository import QcFindingRepository
 
@@ -40,10 +40,10 @@ async def list_findings(
 @router.put("/findings/{finding_id}/resolve", response_model=ApiDataResponse[QcFindingOut])
 async def resolve_finding(
     finding_id: int,
-    _current_user: CurrentUser,
+    _admin: AdminUser,
     session: SessionDep,
 ) -> ApiDataResponse[QcFindingOut]:
-    """Mark a finding as resolved (admin / JWT required)."""
+    """Mark a finding as resolved (admin role required)."""
     repo = QcFindingRepository(session)
     row = await repo.mark_resolved(finding_id)
     if row is None:

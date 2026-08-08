@@ -8,7 +8,6 @@ import { APP_NAME } from "../../lib/constants";
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/elements": "Elementos",
-  "/chat": "IA Chat",
 };
 
 type HeaderProps = {
@@ -75,7 +74,7 @@ export function Header({
           {isLoadingUser
             ? "Cargando…"
             : user
-              ? user.email
+              ? `${user.email}${user.role === "guest" ? " (invitado)" : ""}`
               : "Sesión activa"}
         </span>
         <button

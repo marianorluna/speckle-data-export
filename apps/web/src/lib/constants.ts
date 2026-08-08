@@ -11,6 +11,7 @@ export const API_ENDPOINTS = {
   authMe: "/api/auth/me",
   authToken: "/api/auth/token",
   speckleViewerConfig: "/api/speckle/viewer-config",
+  chat: "/api/chat",
 } as const;
 
 export const WS_DASHBOARD_PATH = "/ws/dashboard";

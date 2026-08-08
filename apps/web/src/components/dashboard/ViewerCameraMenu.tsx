@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Check, Expand, Shrink, Video } from "lucide-react";
+import { Check, Expand, Info, Shrink, Video } from "lucide-react";
 
 import type { CameraUiState, CanonicalCameraView } from "../../lib/speckle";
 
@@ -15,6 +15,11 @@ type ViewerCameraMenuProps = {
   camera: CameraUiState;
   fullscreen: boolean;
   disabled?: boolean;
+  infoOpen?: boolean;
+  infoDisabled?: boolean;
+  /** Soft highlight when there is a selection (even if panel closed). */
+  hasSelection?: boolean;
+  onToggleInfo?: () => void;
   onSetView: (view: CanonicalCameraView) => void;
   onToggleOrthographic: () => void;
   onToggleFreeOrbit: () => void;
@@ -25,6 +30,10 @@ export function ViewerCameraMenu({
   camera,
   fullscreen,
   disabled = false,
+  infoOpen = false,
+  infoDisabled = false,
+  hasSelection = false,
+  onToggleInfo,
   onSetView,
   onToggleOrthographic,
   onToggleFreeOrbit,
@@ -150,6 +159,26 @@ export function ViewerCameraMenu({
           <Expand className="h-4 w-4" aria-hidden />
         )}
       </button>
+
+      {onToggleInfo ? (
+        <button
+          type="button"
+          title="Selection info"
+          aria-label="Selection info"
+          aria-pressed={infoOpen}
+          disabled={disabled || infoDisabled}
+          onClick={onToggleInfo}
+          className={`rounded-lg border p-2 shadow-md backdrop-blur-sm transition-colors disabled:opacity-40 ${
+            infoOpen
+              ? "border-sky-600 bg-sky-600 text-white hover:bg-sky-700"
+              : hasSelection
+                ? "border-sky-300 bg-sky-50 text-sky-700 hover:bg-sky-100"
+                : "border-gray-200 bg-white/95 text-gray-700 hover:bg-gray-50"
+          }`}
+        >
+          <Info className="h-4 w-4" aria-hidden />
+        </button>
+      ) : null}
     </div>
   );
 }

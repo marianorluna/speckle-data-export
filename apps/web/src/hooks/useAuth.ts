@@ -10,10 +10,13 @@ import {
   setAccessToken,
 } from "../lib/api";
 
+export type UserRole = "admin" | "guest";
+
 export type AuthUser = {
   id: number;
   email: string;
   is_active: boolean;
+  role: UserRole;
 };
 
 type TokenResponse = {
@@ -80,6 +83,8 @@ export function useAuth() {
     logout,
     isAuthenticated,
     user: userQuery.data ?? null,
+    isAdmin: userQuery.data?.role === "admin",
+    isGuest: userQuery.data?.role === "guest",
     isLoadingUser: userQuery.isLoading,
     loginError:
       loginMutation.error instanceof ApiError

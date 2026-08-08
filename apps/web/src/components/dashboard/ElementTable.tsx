@@ -22,11 +22,22 @@ const CRITICAL_PARAM_KEYS = [
   "Height",
 ] as const;
 
-function truncateId(id: string, max = 12): string {
-  if (id.length <= max) {
-    return id;
+/**
+ * Revit UniqueId ends with ``-{8 hex digits}`` encoding the short ElementId
+ * (same value as Speckle ``properties.elementId``). Falls back to a truncated
+ * UniqueId when the format is unexpected.
+ */
+function displayElementId(uniqueId: string): string {
+  const suffix = uniqueId.includes("-")
+    ? uniqueId.slice(uniqueId.lastIndexOf("-") + 1)
+    : "";
+  if (/^[0-9a-fA-F]{8}$/.test(suffix)) {
+    return String(Number.parseInt(suffix, 16));
   }
-  return `${id.slice(0, max)}…`;
+  if (uniqueId.length <= 12) {
+    return uniqueId;
+  }
+  return `${uniqueId.slice(0, 12)}…`;
 }
 
 function categoryColor(category: string): string {
@@ -131,11 +142,9 @@ function Pagination({
 function ElementsTableBody({
   rows,
   selectedElementId,
-  onRowClick,
 }: {
   rows: BimElement[];
   selectedElementId?: string | null;
-  onRowClick?: (elementId: string) => void;
 }) {
   if (rows.length === 0) {
     return (
@@ -149,12 +158,11 @@ function ElementsTableBody({
     <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
       <thead className="sticky top-0 z-10 bg-white">
         <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500 shadow-[0_1px_0_0_#e5e7eb]">
-          <th className="bg-white px-2 py-2 font-medium">ID</th>
+          <th className="bg-white px-2 py-2 font-medium">Element ID</th>
           <th className="bg-white px-2 py-2 font-medium">Categoría</th>
           <th className="bg-white px-2 py-2 font-medium">Familia / Tipo</th>
           <th className="bg-white px-2 py-2 font-medium">Nivel</th>
           <th className="bg-white px-2 py-2 font-medium">Parámetros</th>
-          <th className="bg-white px-2 py-2 font-medium">Acción</th>
         </tr>
       </thead>
       <tbody>
@@ -168,10 +176,10 @@ function ElementsTableBody({
               }`}
             >
               <td
-                className="px-2 py-2 font-mono text-xs text-gray-700"
+                className="px-2 py-2 font-mono text-xs tabular-nums text-gray-700"
                 title={row.element_id}
               >
-                {truncateId(row.element_id)}
+                {displayElementId(row.element_id)}
               </td>
               <td className="px-2 py-2">
                 <Badge
@@ -198,16 +206,6 @@ function ElementsTableBody({
               >
                 {formatCriticalParams(row.parameters)}
               </td>
-              <td className="px-2 py-2">
-                <button
-                  type="button"
-                  className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-                  disabled={!onRowClick}
-                  onClick={() => onRowClick?.(row.element_id)}
-                >
-                  Seleccionar
-                </button>
-              </td>
             </tr>
           );
         })}
@@ -217,14 +215,11 @@ function ElementsTableBody({
 }
 
 export type ElementTableProps = {
+  /** Highlight row when selected from viewer or chat (no table→viewer action). */
   selectedElementId?: string | null;
-  onRowClick?: (elementId: string) => void;
 };
 
-export function ElementTable({
-  selectedElementId,
-  onRowClick,
-}: ElementTableProps) {
+export function ElementTable({ selectedElementId }: ElementTableProps) {
   const [filters, setFilters] = useState<ElementFilters>({
     skip: 0,
     limit: DEFAULT_LIMIT,
@@ -266,7 +261,6 @@ export function ElementTable({
               <ElementsTableBody
                 rows={data?.data ?? []}
                 selectedElementId={selectedElementId}
-                onRowClick={onRowClick}
               />
             </div>
             <div className="shrink-0 border-t border-gray-100 pt-3">
