@@ -37,8 +37,10 @@ services:
       context: ./apps/web
       dockerfile: Dockerfile
     restart: unless-stopped
-    ports:
-      - "8080:80"
+    # Coolify/Traefik routes by domain — do NOT bind host :8080 (conflicts on VPS).
+    # Local publish of 8080 lives in docker-compose.local.yml.
+    expose:
+      - "80"
     depends_on:
       api:
         condition: service_healthy

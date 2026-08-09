@@ -105,7 +105,8 @@ docker compose --env-file .env.compose -f docker-compose.yml -f docker-compose.l
 
 - App: `http://localhost:8080` (nginx → SPA + proxy `/api` y `/ws`)
 - Health: `http://localhost:8080/health`
-- Coolify: usa solo `docker-compose.yml` e inyecta secretos en el panel (sin `docker-compose.local.yml`)
+- Coolify: solo `docker-compose.yml` (sin publicar `:8080`; Traefik usa el dominio de `web`). Secretos en el panel.
+- **Hashes bcrypt en Coolify:** cada `$` del hash debe ir como `$$` (si no, Compose parte el valor y verás warnings `variable is not set`). Ejemplo: `$2b$12$abc…` → `$$2b$$12$$abc…`.
 
 ## Seguridad — no publiques secretos
 

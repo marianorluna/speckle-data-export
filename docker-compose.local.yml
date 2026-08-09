@@ -10,3 +10,6 @@ services:
   api:
     volumes:
       - ./.env:/app/.env:ro
+  web:
+    ports:
+      - "8080:80"
