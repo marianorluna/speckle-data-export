@@ -25,8 +25,8 @@ Guia para levantar el proyecto desde cero.
 ## 1. Clonar el repositorio
 
 ```bash
-git clone <URL_DEL_REPO>
-cd data-speckle
+git clone https://github.com/marianorluna/lab-bim-dashboard.git
+cd lab-bim-dashboard
 ```
 
 ---

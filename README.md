@@ -45,8 +45,8 @@ Dashboard BIM con actualización en tiempo real para modelos de Revit. Visualiza
 ## Instalación local (arranque rápido)
 
 ```bash
-git clone <URL_DEL_REPO>
-cd data-speckle
+git clone https://github.com/marianorluna/lab-bim-dashboard.git
+cd lab-bim-dashboard
 cp .env.example .env
 ```
 

@@ -15,7 +15,7 @@ Mapa tecnico del proyecto. El estilo de codigo y las prohibiciones estan en `.cu
 ## Estructura de carpetas
 
 ```
-data-speckle/
+lab-bim-dashboard/
 ├── .cursor/rules/                    # Reglas de Cursor AI (globs actualizados)
 ├── docs/                             # Documentacion (SSOT en AGENTS.md)
 │   ├── architecture.md               # Este archivo
