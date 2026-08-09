@@ -2,11 +2,11 @@
 
 Documento vivo del **qué** y el **quién**. Las leyes técnicas (cómo / no) viven en `.cursor/rules/`.
 
-> **Template versión:** 1.2.0
+> **Template versión:** 1.3.0
 
 ### Fuente canónica (SSOT)
 
-Este archivo es la **única fuente** de stack (§2), contexto de negocio (§3) y estado de sesión (§4). El resto de docs solo enlazan aquí.
+Este archivo es la **única fuente** de stack (§2), contexto de negocio (§3) y alcance del producto (§4). El resto de docs solo enlazan aquí.
 
 ---
 
@@ -53,69 +53,30 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
 
 ---
 
-## 4. Estado actual
+## 4. Alcance del producto
 
-- **Última sesión:** 2026-08-09 — Prompt 12 Paso 1: Dockerfiles + compose + nginx; smoke local `/health`, login guest, WS 101 (montaje `.env`, no `env_file` Compose por bcrypt `$`).
-- **Foco actual:** Prompt 12 Pasos 2–5 en Coolify → `https://bim-dashboard.demo.marianorluna.com` (secrets, HTTPS, ingest, checklist LinkedIn) + gate e2e chat `OPENROUTER_API_KEY`.
-- **Checklist:**
- - [x] Definir stack completo en AGENTS.md §2
- - [x] Rellenar contexto de negocio en AGENTS.md §3
- - [x] Ejecutar prompt 01 (fundación monorepo: API `/health` + web Vite)
- - [x] Ejecutar prompt 02 (dominio + DB: entidades, ORM, Alembic, repo base)
- - [x] Ejecutar prompt 03 (auth JWT: seed, token, `/me`, login UI)
- - [x] Ejecutar prompt 04 (ingesta Speckle: cliente, IngestCommit, poller, `/api/admin/ingest`)
- - [x] Verificar prompt 04 contra stream Speckle real (`probe_speckle` + SQLite + skip idempotente)
- - [x] Documentar PAT Speckle (scopes) y pruebas de ingesta en `docs/onboarding.md`
- - [x] Ejecutar prompt 05 (API REST: elements / KPIs / QC + OpenAPI)
- - [x] Ejecutar prompt 06 (WebSockets: dashboard + revit + heartbeat + broadcast ingest)
- - [x] Ejecutar prompt 07 (pyRevit push: spool + relay + onboarding + probes)
- - [x] Gate e2e prompt 07: botón ON + editar → spool → relay → `bim_elements.source=revit_ws`
- - [x] Documentar arquitectura final prompt 07 (`architecture.md`, ADR-010, onboarding, prompt 07)
- - [x] Registrar ADRs 002-009 en docs/decisions.md
- - [x] ADR-010 — spool JSONL + relay CPython (sin red dentro de Revit)
- - [x] Ejecutar prompt 08 (shell frontend: layout, UI base, WS + Query hooks)
- - [ ] Actualizar docs/onboarding.md con resto de comandos reales (Windows activate, etc.)
- - [x] Actualizar .env.example con variables del proyecto (hash via `bcrypt` nativo; Speckle PAT/project id; `REVIT_API_KEY`)
- - [x] Actualizar README.md con descripción del producto + demo/install
- - [ ] Actualizar globs de frontend.mdc y backend.mdc
- - [x] Crear prompts 01-03 (fase 1: fundación) — ejecutados
- - [x] Crear prompts 04-06 (fase 2: backend core) — ejecutados
- - [x] Crear prompt 07 (fase 3: pyRevit push) — cerrado e2e
- - [x] Crear/ejecutar prompt 08 (fase 4 frontend init)
- - [x] Ejecutar prompt 09 (KPIs, Recharts, tabla + filtros, indicador WS)
- - [x] Ejecutar prompt 10 (viewer 3D Speckle + map + selección cruzada)
- - [x] Ejecutar prompt 11 (chat IA / text-to-SQL + UI)
- - [x] Chat como widget flotante en Dashboard (FAB; sin ítem IA Chat en sidebar)
-- [x] Dashboard 3 pestañas: Resumen + Elementos (tabla) + Visor 3D; chat «Ver en visor»
- - [x] Demo readiness: roles admin/guest, cuota chat guest, `SPECKLE_VIEWER_TOKEN`, ADR-011
- - [x] Cuota chat: cobro solo con `element_ids`; mensaje relativo; `guest_extended` 50/día
- - [x] Crear prompt 12 (fase 6: deploy)
- - [x] Prompt 12 Paso 1: Dockerfiles + compose + smoke local (health / login / WS)
- - [ ] Prompt 12 Pasos 2–6: Coolify HTTPS + ingest + README URL pública
- - [ ] Gate e2e prompt 11: `OPENROUTER_API_KEY` + pregunta real + highlight dashboard
- - [ ] Ejecutar prompt 12 completo (URL pública LinkedIn)
-- **Bloqueadores:** Coolify/VPS + dominio HTTPS (Pasos 2–5). Gate e2e chat pendiente de `OPENROUTER_API_KEY`. Deuda previa: relay sin `pong` al heartbeat; `parameters` no planos; Materials/IDs duplicados; QC sin motor de reglas; live `commit_processed` tras ingest admin; filtro UI «Sin nivel» no soportado; mapa `element_id`→`applicationId` es identidad. SQLite Snowdon (`structure/snowdon-towers-r27`, 1390 elems; sin Doors — sugerencias chat usan Walls/Framing). Chat: FAB global; guest 3 billables/día/IP; `guest_extended` 50 billables/día/user (no publicar credenciales); `/chat` redirige a `/dashboard`. Credenciales demo públicas: `invitado@marianorluna.com` / `abc123` (solo guest).
+Capacidades estables del dashboard (lo que el repo pretende demostrar):
 
-### Protocolo de cierre de sesión
+- **Auth:** JWT con roles `admin` (escritura / ingest), `guest` (lectura + chat con cuota 3 billables/día/IP) y `guest_extended` (misma lectura; 50 billables/día por user id). Credenciales de invitado de demo: ver `README.md`.
+- **Datos:** ingesta Speckle (commits) y push en vivo desde Revit (pyRevit → spool JSONL → relay → `/ws/revit`).
+- **API:** REST de elements / KPIs / QC + WebSockets de dashboard; OpenAPI.
+- **UI:** Dashboard con pestañas Resumen, Elementos y Visor 3D Speckle; chat NL flotante (FAB); selección cruzada tabla ↔ visor.
+- **Deploy:** Docker Compose (+ Coolify / HTTPS en VPS). Detalle operativo en `docs/onboarding.md` y `docs/prompts/12-deploy.md`.
 
-1. **Última sesión** → fecha de hoy + resumen de lo hecho en una frase.
-2. **Foco actual** → próxima tarea o PR pendiente.
-3. **Checklist** → marca lo completado, añade lo que quedó abierto.
-4. **Bloqueadores** → cualquier decisión pendiente o dependencia externa.
-5. Si tomaste una decisión arquitectónica relevante → añade un ADR en `docs/decisions.md`.
+Las limitaciones estructurales están en §3 (deuda). Decisiones de diseño: `docs/decisions.md`.
 
 ---
 
 ## 5. Mapa de contexto
 
-| Recurso | Dueño |
-|---------|-------|
-| **Este archivo** (`AGENTS.md`) | Stack (§2), producto/dominio (§3), estado de sesión (§4) |
-| `.cursor/rules/` | Cómo programar y qué está prohibido |
-| `docs/architecture.md` | Patrón, capas, carpetas, flujos client ↔ server |
-| `docs/decisions.md` | ADRs — porqués ya tomados |
-| `docs/onboarding.md` | Cómo arrancar el proyecto en local |
-| `.env.example` | Nombres de variables de entorno (sin secretos) |
-| `docs/prompts/` | Prompts paso a paso para desarrollo |
+| Recurso                        | Dueño                                           |
+| ------------------------------ | ----------------------------------------------- |
+| **Este archivo** (`AGENTS.md`) | Stack (§2), producto/dominio (§3), alcance (§4) |
+| `.cursor/rules/`               | Cómo programar y qué está prohibido             |
+| `docs/architecture.md`         | Patrón, capas, carpetas, flujos client ↔ server |
+| `docs/decisions.md`            | ADRs — porqués ya tomados                       |
+| `docs/onboarding.md`           | Cómo arrancar el proyecto en local              |
+| `.env.example`                 | Nombres de variables de entorno (sin secretos)  |
+| `docs/prompts/`                | Prompts paso a paso para desarrollo             |
 
 Si el agente pierde el hilo: menciona `@AGENTS.md` y/o `@docs/architecture.md` en el chat.

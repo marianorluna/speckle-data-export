@@ -76,7 +76,7 @@ data-speckle/
 │       └── Dockerfile
 ├── docker-compose.yml
 ├── .env.example
-├── AGENTS.md                         # SSOT: stack, negocio, estado
+├── AGENTS.md                         # SSOT: stack, negocio, alcance
 ├── README.md
 └── .gitignore
 ```

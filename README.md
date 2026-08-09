@@ -123,7 +123,7 @@ Sí puedes publicar las credenciales de **invitado** de la demo (están pensadas
 
 | Archivo | Función |
 |---------|---------|
-| [`AGENTS.md`](AGENTS.md) | Stack, producto, estado de sesión |
+| [`AGENTS.md`](AGENTS.md) | Stack, producto, alcance |
 | [`docs/architecture.md`](docs/architecture.md) | Capas y flujos |
 | [`docs/decisions.md`](docs/decisions.md) | ADRs |
 | [`docs/onboarding.md`](docs/onboarding.md) | Setup local completo |
