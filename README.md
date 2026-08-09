@@ -13,9 +13,7 @@ Dashboard BIM con actualización en tiempo real para modelos de Revit. Visualiza
 
 ## Demo online
 
-> Sustituye la URL cuando el deploy (prompt 12) esté activo.
-
-- **URL:** `https://TU-DOMINIO` *(pendiente de deploy)*
+- **URL:** [https://bim-dashboard.demo.marianorluna.com](https://bim-dashboard.demo.marianorluna.com) *(DNS/Coolify pendiente si aún no responde)*
 - **Invitado (público a propósito):**
   - Email: `invitado@marianorluna.com`
   - Password: `abc123`
@@ -60,7 +58,7 @@ Edita `.env` (ver [docs/onboarding.md](docs/onboarding.md)). Como mínimo:
 - `SPECKLE_TOKEN`, `SPECKLE_SERVER_URL`, `SPECKLE_STREAM_ID`, `SPECKLE_BRANCH_NAME`
 - `SPECKLE_VIEWER_TOKEN` (recomendado: PAT distinto, solo lectura; si vacío, se reutiliza `SPECKLE_TOKEN`)
 - `OPENROUTER_API_KEY` (si quieres chat IA)
-- `CORS_ORIGINS=http://localhost:5173`
+- `CORS_ORIGINS=http://localhost:5173` (prod Coolify: `https://bim-dashboard.demo.marianorluna.com`)
 
 Generar un hash de password:
 

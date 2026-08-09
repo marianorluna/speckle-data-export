@@ -56,7 +56,7 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
 ## 4. Estado actual
 
 - **Última sesión:** 2026-08-09 — Prompt 12 Paso 1: Dockerfiles + compose + nginx; smoke local `/health`, login guest, WS 101 (montaje `.env`, no `env_file` Compose por bcrypt `$`).
-- **Foco actual:** Prompt 12 Pasos 2–5 en Coolify (secrets, dominio HTTPS, ingest demo, checklist LinkedIn) + gate e2e chat `OPENROUTER_API_KEY`.
+- **Foco actual:** Prompt 12 Pasos 2–5 en Coolify → `https://bim-dashboard.demo.marianorluna.com` (secrets, HTTPS, ingest, checklist LinkedIn) + gate e2e chat `OPENROUTER_API_KEY`.
 - **Checklist:**
  - [x] Definir stack completo en AGENTS.md §2
  - [x] Rellenar contexto de negocio en AGENTS.md §3
