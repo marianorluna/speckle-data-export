@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+.gitignore
+*.md
+.oxlintrc.json
+.dockerignore
+Dockerfile
+**/.DS_Store
+*.log

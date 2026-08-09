@@ -150,6 +150,13 @@ flowchart TB
    - FastAPI ejecuta la consulta, devuelve resultados + IDs de elementos.
    - El frontend resalta los elementos en la tabla y en el visor 3D.
 
+## Deploy (Docker Compose)
+
+- **API:** `apps/api/Dockerfile` — Alembic en entrypoint, uvicorn 1 worker, `--proxy-headers`, SQLite en volumen `/data`.
+- **Web:** `apps/web/Dockerfile` — build Vite + nginx (`apps/web/nginx.conf`) con proxy same-origin de `/api`, `/ws`, `/health`.
+- **Compose:** `docker-compose.yml` (Coolify). Local: añadir `-f docker-compose.local.yml` para montar `.env` (no usar `env_file` de Compose con hashes bcrypt: el `$` corrompe el login).
+- **Arranque local verificado:** `docker compose --env-file .env.compose -f docker-compose.yml -f docker-compose.local.yml up --build` → `/health` 200, login guest, WS 101.
+
 ## Contrato de error de API
 
 Todas las respuestas de error siguen el formato:

@@ -1,0 +1,12 @@
+# Local-only overlay: mount monorepo `.env` into the API image (read-only).
+# Do NOT use Compose `env_file:` for bcrypt hashes — `$` breaks password verification.
+#
+# Usage (from repo root):
+#   docker compose --env-file .env.compose -f docker-compose.yml -f docker-compose.local.yml up --build
+#
+# Coolify: omit this file; inject JWT/Speckle/OpenRouter/hashes via the panel.
+
+services:
+  api:
+    volumes:
+      - ./.env:/app/.env:ro

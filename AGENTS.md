@@ -55,8 +55,8 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
 
 ## 4. Estado actual
 
-- **Última sesión:** 2026-08-08 — Cuota chat billable (solo con element_ids), mensaje relativo + contacto admin, rol `guest_extended` (50/día/user).
-- **Foco actual:** ejecutar prompt 12 (Docker/Coolify) + gate e2e chat con `OPENROUTER_API_KEY`.
+- **Última sesión:** 2026-08-09 — Prompt 12 Paso 1: Dockerfiles + compose + nginx; smoke local `/health`, login guest, WS 101 (montaje `.env`, no `env_file` Compose por bcrypt `$`).
+- **Foco actual:** Prompt 12 Pasos 2–5 en Coolify (secrets, dominio HTTPS, ingest demo, checklist LinkedIn) + gate e2e chat `OPENROUTER_API_KEY`.
 - **Checklist:**
  - [x] Definir stack completo en AGENTS.md §2
  - [x] Rellenar contexto de negocio en AGENTS.md §3
@@ -90,9 +90,11 @@ Eres un arquitecto de software senior y experto en Clean Code. Ayudas a construi
  - [x] Demo readiness: roles admin/guest, cuota chat guest, `SPECKLE_VIEWER_TOKEN`, ADR-011
  - [x] Cuota chat: cobro solo con `element_ids`; mensaje relativo; `guest_extended` 50/día
  - [x] Crear prompt 12 (fase 6: deploy)
+ - [x] Prompt 12 Paso 1: Dockerfiles + compose + smoke local (health / login / WS)
+ - [ ] Prompt 12 Pasos 2–6: Coolify HTTPS + ingest + README URL pública
  - [ ] Gate e2e prompt 11: `OPENROUTER_API_KEY` + pregunta real + highlight dashboard
- - [ ] Ejecutar prompt 12 (Docker/Coolify + URL pública)
-- **Bloqueadores:** Gate e2e chat pendiente de `OPENROUTER_API_KEY` (reiniciar uvicorn tras editar `.env`). Deploy pendiente (prompt 12). Deuda previa: relay sin `pong` al heartbeat; `parameters` no planos; Materials/IDs duplicados; QC sin motor de reglas; live `commit_processed` tras ingest admin; filtro UI «Sin nivel» no soportado; mapa `element_id`→`applicationId` es identidad. SQLite Snowdon (`structure/snowdon-towers-r27`, 1390 elems; sin Doors — sugerencias chat usan Walls/Framing). Chat: FAB global; guest 3 billables/día/IP; `guest_extended` 50 billables/día/user (no publicar credenciales); `/chat` redirige a `/dashboard`. Credenciales demo públicas: `invitado@marianorluna.com` / `abc123` (solo guest).
+ - [ ] Ejecutar prompt 12 completo (URL pública LinkedIn)
+- **Bloqueadores:** Coolify/VPS + dominio HTTPS (Pasos 2–5). Gate e2e chat pendiente de `OPENROUTER_API_KEY`. Deuda previa: relay sin `pong` al heartbeat; `parameters` no planos; Materials/IDs duplicados; QC sin motor de reglas; live `commit_processed` tras ingest admin; filtro UI «Sin nivel» no soportado; mapa `element_id`→`applicationId` es identidad. SQLite Snowdon (`structure/snowdon-towers-r27`, 1390 elems; sin Doors — sugerencias chat usan Walls/Framing). Chat: FAB global; guest 3 billables/día/IP; `guest_extended` 50 billables/día/user (no publicar credenciales); `/chat` redirige a `/dashboard`. Credenciales demo públicas: `invitado@marianorluna.com` / `abc123` (solo guest).
 
 ### Protocolo de cierre de sesión
 

@@ -1,0 +1,47 @@
+# Coolify / production: set secrets in the Coolify env panel (no bind-mount of .env).
+# Local smoke: also pass -f docker-compose.local.yml so `.env` is mounted at /app/.env
+# (Compose `env_file:` corrupts bcrypt hashes because `$` is treated as interpolation).
+#
+#   docker compose --env-file .env.compose -f docker-compose.yml -f docker-compose.local.yml up --build
+#
+# SQLite: named volume `api_data` → /data/bim.db
+# Single uvicorn worker (chat guest quota is in-memory).
+
+services:
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:////data/bim.db
+    volumes:
+      - api_data:/data
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  api_data:

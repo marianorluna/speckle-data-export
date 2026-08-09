@@ -14,8 +14,31 @@ from src.domain.user import User
 from src.infrastructure.auth.jwt import InvalidTokenError, decode_access_token
 from src.infrastructure.db.user_repository import UserRepository
 
-_REPO_ROOT = Path(__file__).resolve().parents[4]
-_ENV_FILE = _REPO_ROOT / ".env"
+
+def _resolve_env_file() -> Path:
+    """Locate ``.env`` in the monorepo root (local) or ``/app`` (Docker image).
+
+    Local layout: ``.../apps/api/src/api/deps.py`` → repo root at ``parents[4]``.
+    Docker layout: ``/app/src/api/deps.py`` → only ``parents[2]`` (``/app``) exists;
+    secrets then come from the process environment (Compose / Coolify).
+    """
+    here = Path(__file__).resolve()
+    candidates: list[Path] = []
+    # Docker WORKDIR /app (alembic.ini sits next to src/).
+    if (here.parents[2] / "alembic.ini").is_file():
+        candidates.append(here.parents[2] / ".env")
+    try:
+        candidates.append(here.parents[4] / ".env")
+    except IndexError:
+        pass
+    candidates.append(Path.cwd() / ".env")
+    for path in candidates:
+        if path.is_file():
+            return path
+    return candidates[0]
+
+
+_ENV_FILE = _resolve_env_file()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 

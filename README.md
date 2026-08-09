@@ -97,6 +97,18 @@ Dashboard: `http://localhost:5173` — login con invitado o admin.
 
 Detalle (ingesta Speckle, pyRevit, troubleshooting): [docs/onboarding.md](docs/onboarding.md).
 
+### Docker local (smoke del prompt 12)
+
+Requisitos: Docker Desktop en marcha y un `.env` válido en la raíz del repo.
+
+```bash
+docker compose --env-file .env.compose -f docker-compose.yml -f docker-compose.local.yml up --build
+```
+
+- App: `http://localhost:8080` (nginx → SPA + proxy `/api` y `/ws`)
+- Health: `http://localhost:8080/health`
+- Coolify: usa solo `docker-compose.yml` e inyecta secretos en el panel (sin `docker-compose.local.yml`)
+
 ## Seguridad — no publiques secretos
 
 **Nunca** subas a GitHub ni pegues en LinkedIn:
